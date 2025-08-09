@@ -47,7 +47,10 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
             <Spinner className="h-6 w-6 text-blue-600" />
             <div>
               <div className="font-medium">Analyzing AI search mechanism…</div>
-              <div className="text-sm text-gray-500">Reverse-engineering source selection patterns and visibility factors</div>
+              <div className="text-sm text-gray-500">
+                Reverse-engineering source selection patterns and visibility
+                factors
+              </div>
             </div>
           </div>
         </div>
@@ -60,7 +63,11 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
         <Card>
           <CardBody>
             <div className="text-xs text-blue-800">
-              <strong>Query:</strong> {bundle.run?.query} | <strong>AI Search Funnel:</strong> {bundle.analysis?.funnel?.proposed ?? 0} proposed → {bundle.analysis?.funnel?.fetched ?? 0} fetched → {bundle.analysis?.funnel?.cited ?? 0} cited
+              <strong>Query:</strong> {bundle.run?.query} |{" "}
+              <strong>AI Search Funnel:</strong>{" "}
+              {bundle.analysis?.funnel?.proposed ?? 0} proposed →{" "}
+              {bundle.analysis?.funnel?.fetched ?? 0} fetched →{" "}
+              {bundle.analysis?.funnel?.cited ?? 0} cited
             </div>
           </CardBody>
         </Card>
@@ -72,28 +79,39 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <KPICard label="Sources AI Found" value={bundle.sources?.length || 0} />
-              <KPICard label="Unique Publishers" value={new Set(bundle.sources?.map((s: any) => s.domain) || []).size} />
-              <KPICard label="Citation Rate" value={`${bundle.sources?.length ? Math.round(((bundle.evidence?.length || 0) / bundle.sources.length) * 100) : 0}%`} />
+              <KPICard
+                label="Sources AI Found"
+                value={bundle.sources?.length || 0}
+              />
+              <KPICard
+                label="Unique Publishers"
+                value={
+                  new Set(bundle.sources?.map((s: any) => s.domain) || []).size
+                }
+              />
+              <KPICard
+                label="Citation Rate"
+                value={`${bundle.sources?.length ? Math.round(((bundle.evidence?.length || 0) / bundle.sources.length) * 100) : 0}%`}
+              />
             </div>
           </CardBody>
         </Card>
 
         {/* Who Actually Gets Cited */}
         {bundle.evidence?.length > 0 && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-6">
-            <h3 className="text-xl font-bold text-orange-900 mb-1">
-              Who Actually Gets Cited?
-            </h3>
-            <p className="text-sm text-orange-700 mb-4">
-              Analysis of sources that AI actually referenced in the answer
-            </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Who Actually Gets Cited?</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="text-sm text-orange-700 mb-2">Analysis of sources that AI actually referenced in the answer</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg p-4 border border-orange-200">
-                <h4 className="text-lg font-semibold text-orange-800 mb-3">
-                  🏆 Cited Sources Only
-                </h4>
+              <Card>
+                <CardHeader>
+                  <CardTitle>🏆 Cited Sources Only</CardTitle>
+                </CardHeader>
+                <CardBody>
                 <div className="space-y-2">
                   {(() => {
                     // Get ONLY sources that were actually cited
@@ -144,12 +162,14 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                       });
                   })()}
                 </div>
-              </div>
+                </CardBody>
+              </Card>
 
-              <div className="bg-white rounded-lg p-4 border border-orange-200">
-                <h4 className="text-lg font-semibold text-orange-800 mb-3">
-                  📊 Citation Authority Breakdown
-                </h4>
+              <Card>
+                <CardHeader>
+                  <CardTitle>📊 Citation Authority Breakdown</CardTitle>
+                </CardHeader>
+                <CardBody>
                 <div className="space-y-2">
                   {(() => {
                     // Much more granular categorization based on actual domain patterns
@@ -596,9 +616,11 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     }
                   })()}
                 </div>
-              </div>
+                </CardBody>
+              </Card>
             </div>
-          </div>
+            </CardBody>
+          </Card>
         )}
 
         {/* Why These Sources Were Cited (Evidence-Driven) */}
@@ -785,14 +807,12 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
           };
 
           return (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-red-900 mb-1">
-                Why Sources Get Ignored (Not Cited)
-              </h3>
-              <p className="text-sm text-red-700 mb-4">
-                These were discovered but not referenced in the answer.
-                Heuristics below explain likely reasons.
-              </p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Why Sources Get Ignored (Not Cited)</CardTitle>
+              </CardHeader>
+              <CardBody>
+              <p className="text-sm text-red-700 mb-2">These were discovered but not referenced in the answer. Heuristics below explain likely reasons.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {uncited.slice(0, 10).map((s: any, i: number) => (
                   <div
@@ -807,9 +827,7 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     </div>
                     <div className="text-xs text-red-600 mt-1">{s.domain}</div>
                     <div className="mt-2 inline-flex items-center gap-2">
-                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200">
-                        {reasonFor(s)}
-                      </span>
+                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200">{reasonFor(s)}</span>
                     </div>
                   </div>
                 ))}
@@ -819,7 +837,8 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                   + {uncited.length - 10} more not shown
                 </div>
               )}
-            </div>
+              </CardBody>
+            </Card>
           );
         })()}
 
@@ -890,15 +909,15 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                       {bundle.sources.length < 3
                         ? "LOW 🟢"
                         : bundle.sources.length < 8
-                        ? "MEDIUM 🟡"
-                        : "HIGH 🔴"}
+                          ? "MEDIUM 🟡"
+                          : "HIGH 🔴"}
                     </p>
                     <p className="text-green-700 mt-1">
                       {bundle.sources.length < 3
                         ? "Excellent opportunity to dominate with quality content"
                         : bundle.sources.length < 8
-                        ? "Moderate competition - focus on unique angles"
-                        : "Saturated space - need exceptional content to compete"}
+                          ? "Moderate competition - focus on unique angles"
+                          : "Saturated space - need exceptional content to compete"}
                     </p>
                   </div>
                   <div>
@@ -1450,10 +1469,10 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
               {bundle.sources?.length === 0
                 ? "Create foundational content immediately - first-mover advantage available"
                 : bundle.sources?.length < 5
-                ? "Scale content production while competition is low"
-                : bundle.sources?.length > 15
-                ? "Focus on unique angles and exceptional quality to break through"
-                : "Build consistent content presence and establish thought leadership"}
+                  ? "Scale content production while competition is low"
+                  : bundle.sources?.length > 15
+                    ? "Focus on unique angles and exceptional quality to break through"
+                    : "Build consistent content presence and establish thought leadership"}
             </p>
           </div>
         </div>
