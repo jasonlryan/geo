@@ -1,4 +1,4 @@
 {
-  "/insights/page": "app/insights/page.js",
-  "/search/page": "app/search/page.js"
+  "/search/page": "app/search/page.js",
+  "/insights/page": "app/insights/page.js"
 }

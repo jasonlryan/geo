@@ -4,3 +4,55 @@
 
 html, body { height: 100%; }
 
+/* Design Tokens */
+:root {
+  --color-bg: 255 255 255;
+  --color-card: 255 255 255;
+  --color-border: 226 232 240; /* slate-200 */
+  --color-text: 17 24 39; /* gray-900 */
+  --color-muted: 100 116 139; /* slate-500 */
+  --color-primary: 37 99 235; /* blue-600 */
+  --color-success: 5 150 105; /* emerald-600 */
+  --color-warn: 217 119 6; /* amber-600 */
+  --color-danger: 220 38 38; /* red-600 */
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 10px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+[data-theme="dark"] {
+  --color-bg: 2 6 23; /* slate-950 */
+  --color-card: 15 23 42; /* slate-900 */
+  --color-border: 51 65 85; /* slate-700 */
+  --color-text: 241 245 249; /* slate-100 */
+  --color-muted: 148 163 184; /* slate-400 */
+  --color-primary: 96 165 250; /* blue-400 */
+  --color-success: 52 211 153; /* emerald-400 */
+  --color-warn: 251 191 36; /* amber-400 */
+  --color-danger: 248 113 113; /* red-400 */
+}
+
+/* Base */
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
+}
+
+.card {
+  @apply rounded-md border p-4 bg-white;
+  background-color: rgb(var(--color-card));
+  border-color: rgb(var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.focus-ring {
+  @apply outline-none ring-2 ring-offset-2;
+  --tw-ring-color: rgb(var(--color-primary) / 0.4);
+}
+

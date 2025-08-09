@@ -229,29 +229,25 @@ export default function SearchPage() {
     <div className="space-y-6">
       <form onSubmit={onSubmit} className="flex gap-2 flex-wrap items-start">
         <textarea
-          className="flex-1 border rounded px-3 py-2 min-h-[80px] resize-y"
+          className="flex-1 border rounded-md px-3 py-2 min-h-[96px] resize-y focus-ring"
           placeholder="Ask a question..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           rows={3}
         />
-        <button
-          className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-          disabled={loading || !query.trim()}
-        >
-          {loading ? "Running..." : "Run"}
-        </button>
-        <button
+        <Button type="submit" loading={loading} disabled={loading || !query.trim()}>
+          {loading ? "Running…" : "Run"}
+        </Button>
+        <Button
           type="button"
-          className="border px-4 py-2 rounded disabled:opacity-50"
+          variant="outline"
           disabled={loading}
           onClick={async () => {
-            const q = await generateRandomQuery();
-            // Don't auto-run the query, let user see it first
+            await generateRandomQuery();
           }}
         >
           Random
-        </button>
+        </Button>
       </form>
 
       {loading && (
