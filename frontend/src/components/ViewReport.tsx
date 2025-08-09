@@ -10,6 +10,10 @@ import {
 } from "@/lib/format";
 import { apiBaseUrl } from "@/lib/api";
 import { marked } from "marked";
+import Card, { CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import KPICard from "@/components/ui/KPICard";
+import Badge from "@/components/ui/Badge";
+import Spinner from "@/components/ui/Spinner";
 
 export default function ViewReport({ bundle }: { bundle: RunBundle }) {
   const [open, setOpen] = useState(false);
@@ -40,30 +44,10 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
       return (
         <div className="flex items-center justify-center h-[70vh] text-gray-700">
           <div className="flex items-center gap-3">
-            <svg
-              className="animate-spin h-6 w-6 text-blue-600"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              ></path>
-            </svg>
+            <Spinner className="h-6 w-6 text-blue-600" />
             <div>
               <div className="font-medium">Analyzing AI search mechanism…</div>
-              <div className="text-sm text-gray-500">
-                Reverse-engineering source selection patterns and visibility
-                factors
-              </div>
+              <div className="text-sm text-gray-500">Reverse-engineering source selection patterns and visibility factors</div>
             </div>
           </div>
         </div>
@@ -73,77 +57,27 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
     return (
       <div className="space-y-6">
         {/* Query context - compact */}
-        <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800">
-          <strong>Query:</strong> {bundle.run?.query} |{" "}
-          <strong>AI Search Funnel:</strong>{" "}
-          {bundle.analysis?.funnel?.proposed ?? 0} sources proposed →{" "}
-          {bundle.analysis?.funnel?.fetched ?? 0} fetched →{" "}
-          {bundle.analysis?.funnel?.cited ?? 0} actually cited by AI
-        </div>
+        <Card>
+          <CardBody>
+            <div className="text-xs text-blue-800">
+              <strong>Query:</strong> {bundle.run?.query} | <strong>AI Search Funnel:</strong> {bundle.analysis?.funnel?.proposed ?? 0} proposed → {bundle.analysis?.funnel?.fetched ?? 0} fetched → {bundle.analysis?.funnel?.cited ?? 0} cited
+            </div>
+          </CardBody>
+        </Card>
 
         {/* AI Search Performance Summary */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold text-blue-900 mb-1">
-            AI Search Performance Summary
-          </h3>
-          <p className="text-sm text-blue-700 mb-4">
-            Real metrics that matter for content strategy
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg p-4 border border-blue-200">
-              <div className="text-3xl font-bold text-blue-700 mb-1">
-                {bundle.sources?.length || 0}
-              </div>
-              <div className="text-sm font-medium text-blue-600">
-                Sources AI Found
-              </div>
-              <div className="text-xs text-blue-500 mt-1">
-                {bundle.sources?.length === 0
-                  ? "Opportunity: Low competition"
-                  : bundle.sources?.length < 5
-                  ? "Moderate competition"
-                  : "High competition space"}
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Search Performance Summary</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <KPICard label="Sources AI Found" value={bundle.sources?.length || 0} />
+              <KPICard label="Unique Publishers" value={new Set(bundle.sources?.map((s: any) => s.domain) || []).size} />
+              <KPICard label="Citation Rate" value={`${bundle.sources?.length ? Math.round(((bundle.evidence?.length || 0) / bundle.sources.length) * 100) : 0}%`} />
             </div>
-
-            <div className="bg-white rounded-lg p-4 border border-green-200">
-              <div className="text-3xl font-bold text-green-700 mb-1">
-                {new Set(bundle.sources?.map((s: any) => s.domain) || []).size}
-              </div>
-              <div className="text-sm font-medium text-green-600">
-                Unique Publishers
-              </div>
-              <div className="text-xs text-green-500 mt-1">
-                {new Set(bundle.sources?.map((s: any) => s.domain) || []).size <
-                3
-                  ? "Low diversity - opportunity!"
-                  : new Set(bundle.sources?.map((s: any) => s.domain) || [])
-                      .size > 8
-                  ? "High diversity - competitive"
-                  : "Moderate diversity"}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-4 border border-purple-200">
-              <div className="text-3xl font-bold text-purple-700 mb-1">
-                {bundle.sources?.length > 0
-                  ? Math.round(
-                      ((bundle.evidence?.length || 0) / bundle.sources.length) *
-                        100
-                    )
-                  : 0}
-                %
-              </div>
-              <div className="text-sm font-medium text-purple-600">
-                Citation Rate
-              </div>
-              <div className="text-xs text-purple-500 mt-1">
-                Sources actually cited by AI
-              </div>
-            </div>
-          </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {/* Who Actually Gets Cited */}
         {bundle.evidence?.length > 0 && (
