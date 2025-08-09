@@ -1,9 +1,12 @@
 import json
 import uuid
 from datetime import datetime
+import os
+import hashlib
 from typing import Dict, Any, Optional
 
 from ..core.db import get_session
+from ..core.cache import CACHE
 from ..models import Run, Source, Claim, Evidence, Classification
 
 
@@ -16,7 +19,28 @@ class Store:
         run_data = bundle["run"]
         run_id = run_data.get("run_id") or str(uuid.uuid4())
         run_data["run_id"] = run_id
+        # Keep an in-memory mirror for local dev convenience
         self._mem[run_id] = bundle
+
+        # Persist the complete bundle to cache for 24h
+        try:
+            CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle, ttl=24 * 3600)
+        except Exception:
+            # Non-fatal: continue with DB write
+            pass
+
+        # Store a short-lived query hash → run_id for deduplication (30m)
+        try:
+            query = (run_data.get("query") or "").strip().lower()
+            if query:
+                qhash = hashlib.sha256((query + os.getenv("PIPELINE_VERSION", "1")).encode()).hexdigest()
+                CACHE.set(CACHE.ai_key(f"query_hash:{qhash}"), run_id, ttl=30 * 60)
+                # Indices
+                CACHE.zadd(CACHE.ai_key("recent"), score=datetime.utcnow().timestamp(), member=run_id, ttl=7 * 24 * 3600)
+                CACHE.lpush(CACHE.ai_key(f"q:{qhash}"), run_id, ttl=7 * 24 * 3600)
+                CACHE.ltrim(CACHE.ai_key(f"q:{qhash}"), 20)
+        except Exception:
+            pass
         with get_session() as s:
             s.add(
                 Run(
@@ -85,6 +109,13 @@ class Store:
         return run_id
 
     def get_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        # Prefer cached full bundle; fall back to in-memory mirror
+        try:
+            cached = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+            if cached:
+                return cached
+        except Exception:
+            pass
         return self._mem.get(run_id)
 
     def list_runs(self) -> Dict[str, Dict[str, Any]]:

@@ -1,14 +1,15 @@
 from fastapi import APIRouter, HTTPException
+from datetime import datetime
 import time
 from ..core.store import STORE
 from ..services.analysis import compute_analysis
 from ..services.analysis_report import build_markdown_report
+from ..core.cache import CACHE
 
 
 router = APIRouter()
 
-# Simple in-memory cache for LLM analysis per run_id
-# Structure: { run_id: {"ts": epoch_seconds, "ttl": 3600, "data": json } }
+# Prefer Redis-backed cache; fall back to in-memory
 _LLM_ANALYSIS_CACHE: dict[str, dict] = {}
 
 
@@ -104,11 +105,17 @@ def generate_llm_analysis_from_bundle(run_id: str, bundle_data: dict):
     Frontend already has all the data - just process it.
     """
     try:
-        # Serve cached if fresh
+        # Try Redis cache first
+        redis_cached = CACHE.get_json(CACHE.ai_key(f"analysis:{run_id}"))
+        if redis_cached:
+            print(f"[CACHE HIT][redis] LLM analysis {run_id}")
+            return redis_cached
+
+        # Fallback to in-memory cache
         cache = _LLM_ANALYSIS_CACHE.get(run_id)
         now = time.time()
         if cache and (now - cache.get("ts", 0) < cache.get("ttl", 3600)):
-            print(f"[CACHE HIT] Serving cached LLM analysis for run {run_id}")
+            print(f"[CACHE HIT][mem] LLM analysis {run_id}")
             return cache["data"]
 
         print(f"[CACHE MISS] Generating new LLM analysis for run {run_id}")
@@ -122,7 +129,11 @@ def generate_llm_analysis_from_bundle(run_id: str, bundle_data: dict):
         if not data:
             return {"ok": False, "reason": "generation_failed"}
         
-        # Cache for 60 minutes
+        # Cache for 60 minutes (Redis + mem fallback)
+        try:
+            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data, ttl=3600)
+        except Exception:
+            pass
         _LLM_ANALYSIS_CACHE[run_id] = {"ts": now, "ttl": 3600, "data": data}
         return data
     except Exception as e:
@@ -136,7 +147,12 @@ def get_llm_citation_analysis(run_id: str):
     Use POST version with bundle data for better performance.
     """
     try:
-        # Serve cached if fresh
+        # Redis cache first
+        redis_cached = CACHE.get_json(CACHE.ai_key(f"analysis:{run_id}"))
+        if redis_cached:
+            return redis_cached
+
+        # Mem fallback
         cache = _LLM_ANALYSIS_CACHE.get(run_id)
         now = time.time()
         if cache and (now - cache.get("ts", 0) < cache.get("ttl", 3600)):
@@ -152,8 +168,164 @@ def get_llm_citation_analysis(run_id: str):
         if not data:
             return {"ok": False, "reason": "generation_failed"}
         
+        try:
+            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data, ttl=3600)
+        except Exception:
+            pass
         _LLM_ANALYSIS_CACHE[run_id] = {"ts": now, "ttl": 3600, "data": data}
         return data
     except Exception as e:
         return {"ok": False, "reason": "exception", "message": str(e)}
+
+
+@router.get("/debug/redis-keys")
+def debug_redis_keys():
+    try:
+        keys = sorted(CACHE.keys(f"{CACHE.ai_prefix()}:*"))
+        sample = []
+        for k in keys[:50]:
+            sample.append({
+                "key": k,
+                "ttl": CACHE.ttl(k),
+            })
+        return {"count": len(keys), "sample": sample}
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
+
+
+@router.get("/insights/recent")
+def insights_recent(limit: int = 20):
+    """Return recent run_ids with timestamps from the versioned ZSET."""
+    key = CACHE.ai_key("recent")
+    items = CACHE.zrevrange_withscores(key, 0, max(0, limit - 1))
+    return {"items": [{"run_id": m, "ts": s} for m, s in items]}
+
+
+@router.get("/insights/query/{qhash}")
+def insights_query(qhash: str, limit: int = 20):
+    """Return recent run_ids for a given query hash list."""
+    key = CACHE.ai_key(f"q:{qhash}")
+    items = CACHE.lrange(key, 0, max(0, limit - 1))
+    return {"items": items}
+
+
+@router.get("/insights/aggregate")
+def insights_aggregate(limit: int = 50):
+    """Aggregate patterns across recent runs from Redis bundles.
+
+    Returns:
+        - runs: number of runs included
+        - totals: total_sources, total_cited_sources, avg_citation_rate
+        - domains_top: list[[domain, citations]] sorted desc
+    """
+    recent = CACHE.zrevrange_withscores(CACHE.ai_key("recent"), 0, max(0, limit - 1))
+    run_ids = [m for m, _ in recent]
+    total_sources = 0
+    total_cited_sources = 0
+    domain_citations: dict[str, int] = {}
+    runs_counted = 0
+
+    for run_id in run_ids:
+        bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+        if not bundle:
+            continue
+        runs_counted += 1
+        sources = bundle.get("sources", [])
+        evidence = bundle.get("evidence", [])
+        total_sources += len(sources)
+        cited_ids = {e.get("source_id") for e in evidence if e.get("source_id")}
+        total_cited_sources += len(cited_ids)
+        # Count domains for cited sources only
+        src_by_id = {s.get("source_id"): s for s in sources}
+        for sid in cited_ids:
+            s = src_by_id.get(sid)
+            if not s:
+                continue
+            domain = (s.get("domain") or "").lower()
+            if not domain:
+                continue
+            domain_citations[domain] = domain_citations.get(domain, 0) + 1
+
+    avg_citation_rate = 0.0
+    if total_sources > 0:
+        avg_citation_rate = (total_cited_sources / total_sources) if runs_counted > 0 else 0.0
+
+    domains_top = sorted(domain_citations.items(), key=lambda x: x[1], reverse=True)[:20]
+
+    return {
+        "runs": runs_counted,
+        "totals": {
+            "total_sources": total_sources,
+            "total_cited_sources": total_cited_sources,
+            "avg_citation_rate": round(avg_citation_rate, 4),
+        },
+        "domains_top": domains_top,
+    }
+
+
+@router.post("/insights/migrate_legacy")
+def migrate_legacy(dry_run: bool = True, limit: int = 1000):
+    """Copy legacy, un-versioned ai_search:* keys into versioned namespace.
+
+    - ai_search:{run_id}                → ai_search:v{ver}:{run_id}
+    - ai_search:analysis:{run_id}       → ai_search:v{ver}:analysis:{run_id}
+    - ai_search:query_hash:{hash}       → ai_search:v{ver}:query_hash:{hash}
+    Also rebuild indices:
+      - recent ZSET with run created_at when available
+      - q:{hash} LIST with run_id
+    """
+    ver_prefix = CACHE.ai_prefix()
+    legacy_keys = [k for k in CACHE.keys("ai_search:*") if not k.startswith(f"{ver_prefix}:")]
+    migrated = {"bundles": 0, "analysis": 0, "qhash": 0}
+    for k in legacy_keys[:limit]:
+        try:
+            if k.startswith("ai_search:analysis:"):
+                run_id = k.split(":", 2)[2]
+                data = CACHE.get_json(k)
+                if not data:
+                    continue
+                if not dry_run:
+                    ttl = CACHE.ttl(k) or 3600
+                    CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data, ttl=ttl)
+                migrated["analysis"] += 1
+                continue
+            if k.startswith("ai_search:query_hash:"):
+                h = k.split(":", 2)[2]
+                run_id = CACHE.get(k)
+                if not run_id:
+                    continue
+                if not dry_run:
+                    ttl = CACHE.ttl(k) or 30 * 60
+                    CACHE.set(CACHE.ai_key(f"query_hash:{h}"), run_id, ttl=ttl)
+                    # Append to query history list
+                    CACHE.lpush(CACHE.ai_key(f"q:{h}"), run_id, ttl=7 * 24 * 3600)
+                    CACHE.ltrim(CACHE.ai_key(f"q:{h}"), 20)
+                migrated["qhash"] += 1
+                continue
+            # Otherwise treat as bundle key for run
+            if k.startswith("ai_search:"):
+                run_id = k.split(":", 1)[1]
+                bundle = CACHE.get_json(k)
+                if not bundle:
+                    continue
+                if not dry_run:
+                    ttl = CACHE.ttl(k) or 24 * 3600
+                    CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle, ttl=ttl)
+                    # Index recent by created_at if present
+                    created_at = (bundle.get("run") or {}).get("created_at")
+                    ts = None
+                    if isinstance(created_at, str):
+                        try:
+                            iso = created_at[:-1] if created_at.endswith("Z") else created_at
+                            ts = datetime.fromisoformat(iso).timestamp()
+                        except Exception:
+                            ts = None
+                    if ts is None:
+                        ts = datetime.utcnow().timestamp()
+                    CACHE.zadd(CACHE.ai_key("recent"), score=ts, member=run_id, ttl=7 * 24 * 3600)
+                migrated["bundles"] += 1
+        except Exception:
+            # continue best-effort
+            continue
+    return {"ok": True, "migrated": migrated, "scanned": len(legacy_keys)}
 

@@ -1,15 +1,35 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createRun, getRunBundle, apiBaseUrl } from "@/lib/api";
 import ExportsBar from "@/components/ExportsBar";
 import ViewReport from "@/components/ViewReport";
+// Insights is now a dedicated route: /insights
 
 export default function SearchPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bundle, setBundle] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<"sources" | "analysis">("sources");
+  const [activeTab, setActiveTab] = useState<"sources" | "analysis">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "analysis") return "analysis";
+    }
+    return "sources";
+  });
+
+  // Keep tab in sync with URL changes (e.g., header link clicks)
+  useEffect(() => {
+    const tab = (searchParams.get("tab") || "").toLowerCase();
+    if (tab === "analysis" && activeTab !== "analysis")
+      setActiveTab("analysis");
+    else if (tab === "sources" && activeTab !== "sources")
+      setActiveTab("sources");
+  }, [searchParams]);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("");
   const [credBandFilter, setCredBandFilter] = useState<string>("");
 
@@ -21,6 +41,11 @@ export default function SearchPage() {
       const { run_id } = await createRun(q);
       const data = await getRunBundle(run_id);
       setBundle({ run_id, ...data });
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("lastRunId", run_id);
+        }
+      } catch {}
     } catch (err: any) {
       setError(err?.message || "Failed to run search");
     } finally {
@@ -61,8 +86,38 @@ export default function SearchPage() {
     return "D";
   };
 
+  // Restore last run bundle when returning from other pages
+  useEffect(() => {
+    const restore = async () => {
+      if (bundle) return;
+      try {
+        const rid =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem("lastRunId")
+            : null;
+        if (!rid) return;
+        setLoading(true);
+        const data = await getRunBundle(rid);
+        setBundle({ run_id: rid, ...data });
+      } catch (e) {
+        // ignore; user can run a new search
+      } finally {
+        setLoading(false);
+      }
+    };
+    restore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Normalize sources to a safe array regardless of backend shape
+  const sourcesList: any[] = useMemo(() => {
+    return Array.isArray((bundle as any)?.sources)
+      ? ((bundle as any).sources as any[])
+      : [];
+  }, [bundle]);
+
   const filteredSources =
-    bundle?.sources?.filter((s: any) => {
+    sourcesList.filter((s: any) => {
       const band = computeCredBand(s?.credibility?.score);
       const mediaOk = mediaTypeFilter
         ? s?.media_type === mediaTypeFilter
@@ -72,20 +127,19 @@ export default function SearchPage() {
     }) ?? [];
 
   const uniqueMediaTypes = Array.from(
-    new Set(
-      (bundle?.sources ?? []).map((s: any) => s.media_type).filter(Boolean)
-    )
+    new Set(sourcesList.map((s: any) => s.media_type).filter(Boolean))
   );
   const uniqueCredBands = ["A", "B", "C", "D"];
 
+  const safeArray = (v: any) => (Array.isArray(v) ? v : []);
+  const claimsList = safeArray(bundle?.claims);
+  const evidenceList = safeArray(bundle?.evidence);
   const evidenceByClaim: Record<string, Set<string>> = {};
-  if (bundle?.evidence) {
-    for (const e of bundle.evidence) {
-      const cid = e.claim_id;
-      const sid = e.source_id;
-      if (!evidenceByClaim[cid]) evidenceByClaim[cid] = new Set();
-      evidenceByClaim[cid].add(sid);
-    }
+  for (const e of evidenceList) {
+    const cid = e.claim_id;
+    const sid = e.source_id;
+    if (!evidenceByClaim[cid]) evidenceByClaim[cid] = new Set();
+    evidenceByClaim[cid].add(sid);
   }
 
   const categorize = (s: any): string => {
@@ -131,13 +185,13 @@ export default function SearchPage() {
   const answerHtml = useMemo(() => {
     if (!bundle?.answer?.text) return "";
     const idToIdx: Record<string, number> = {};
-    (bundle.sources || []).forEach((s: any, i: number) => {
+    sourcesList.forEach((s: any, i: number) => {
       idToIdx[s.source_id] = i + 1;
     });
     let html = escapeHtml(bundle.answer.text);
     html = html.replace(/src_[a-z0-9_\-]+/gi, (m) => {
       const idx = idToIdx[m];
-      const s = (bundle.sources || []).find((x: any) => x.source_id === m);
+      const s = sourcesList.find((x: any) => x.source_id === m);
       if (!idx || !s) return m;
       const title = escapeHtml(s.title || s.domain || s.url || m);
       const url = s.url || "#";
@@ -253,7 +307,7 @@ export default function SearchPage() {
             <section className="bg-white rounded border p-4">
               <h3 className="font-medium mb-2">Claims</h3>
               <ul className="space-y-2 list-disc pl-5">
-                {bundle.claims.map((c: any) => (
+                {claimsList.map((c: any) => (
                   <li key={c.claim_id}>
                     <span className="font-medium">
                       #{c.answer_sentence_index + 1}:
@@ -269,7 +323,10 @@ export default function SearchPage() {
             <section className="bg-white rounded border p-0 overflow-hidden">
               <div className="flex border-b">
                 <button
-                  onClick={() => setActiveTab("sources")}
+                  onClick={() => {
+                    setActiveTab("sources");
+                    router.replace("/search?tab=sources", { scroll: false });
+                  }}
                   className={`px-3 py-2 text-sm ${
                     activeTab === "sources"
                       ? "border-b-2 border-black"
@@ -279,7 +336,10 @@ export default function SearchPage() {
                   Sources
                 </button>
                 <button
-                  onClick={() => setActiveTab("analysis")}
+                  onClick={() => {
+                    setActiveTab("analysis");
+                    router.replace("/search?tab=analysis", { scroll: false });
+                  }}
                   className={`px-3 py-2 text-sm ${
                     activeTab === "analysis"
                       ? "border-b-2 border-black"
@@ -288,6 +348,7 @@ export default function SearchPage() {
                 >
                   Analysis
                 </button>
+                {/* Insights tab removed - use header link to /insights */}
               </div>
               <div className="p-4">
                 {activeTab === "sources" && (
@@ -424,7 +485,7 @@ export default function SearchPage() {
                               <th className="border px-2 py-1 text-left">
                                 Claim \\ Source
                               </th>
-                              {bundle.sources.map((s: any, i: number) => (
+                              {sourcesList.map((s: any, i: number) => (
                                 <th
                                   key={s.source_id}
                                   className="border px-2 py-1"
@@ -435,12 +496,12 @@ export default function SearchPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {bundle.claims.map((c: any) => (
+                            {claimsList.map((c: any) => (
                               <tr key={c.claim_id}>
                                 <td className="border px-2 py-1 align-top">
                                   #{c.answer_sentence_index + 1}
                                 </td>
-                                {bundle.sources.map((s: any) => (
+                                {sourcesList.map((s: any) => (
                                   <td
                                     key={s.source_id}
                                     className="border px-2 py-1 text-center"
@@ -460,6 +521,7 @@ export default function SearchPage() {
                     </div>
                   </div>
                 )}
+                {/* Insights content lives at /insights */}
               </div>
             </section>
           </aside>

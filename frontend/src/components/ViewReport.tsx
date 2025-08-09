@@ -667,6 +667,228 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
           </div>
         )}
 
+        {/* Why These Sources Were Cited (Evidence-Driven) */}
+        {(() => {
+          const ev = (bundle.evidence || []) as any[];
+          const sources = (bundle.sources || []) as any[];
+          if (ev.length === 0 || sources.length === 0) return null;
+
+          const citedBySource: Record<string, any[]> = {};
+          for (const e of ev) {
+            const sid = e.source_id;
+            if (!citedBySource[sid]) citedBySource[sid] = [];
+            citedBySource[sid].push(e);
+          }
+
+          const citedSources = sources.filter(
+            (s) => citedBySource[s.source_id]
+          );
+          if (citedSources.length === 0) return null;
+
+          const domainCounts: Record<string, number> = {};
+          for (const s of citedSources) {
+            domainCounts[s.domain] = (domainCounts[s.domain] || 0) + 1;
+          }
+
+          const toDate = (iso?: string) => {
+            if (!iso) return null;
+            try {
+              return new Date(iso.endsWith("Z") ? iso : iso + "Z");
+            } catch {
+              return null;
+            }
+          };
+
+          const query = (bundle.run?.query || "").toLowerCase();
+          const queryTerms = Array.from(
+            new Set(
+              query
+                .replace(/[^a-z0-9\s]/g, " ")
+                .split(/\s+/)
+                .filter((w: string) => w.length >= 4)
+            )
+          ).slice(0, 6);
+
+          const coverageMax = Math.max(
+            ...citedSources.map(
+              (s) => (citedBySource[s.source_id] || []).length
+            )
+          );
+
+          const reasonFor = (s: any): string[] => {
+            const reasons: string[] = [];
+            const evid = citedBySource[s.source_id] || [];
+            const coverageCount = evid.length;
+            const avgScore =
+              evid.reduce(
+                (a: number, b: any) => a + (b.coverage_score || 0),
+                0
+              ) / (coverageCount || 1);
+            const cred = (s.credibility || {}).score ?? 0.5;
+            const published = toDate(s.published_at);
+            const yearsOld = published
+              ? (Date.now() - published.getTime()) / (1000 * 60 * 60 * 24 * 365)
+              : null;
+            const title = (s.title || "").toLowerCase();
+            const text = (s.raw_text || "").toString();
+
+            if (coverageCount >= 2 || avgScore >= 0.7)
+              reasons.push("High claim coverage");
+            if (cred >= 0.8) reasons.push("Authoritative source");
+            if (yearsOld !== null && yearsOld <= 3)
+              reasons.push("Fresh/up-to-date");
+            if (queryTerms.some((t) => title.includes(t)))
+              reasons.push("Matches user intent");
+            if (
+              (domainCounts[s.domain] || 0) === 1 ||
+              coverageCount === coverageMax
+            )
+              reasons.push("Unique contribution");
+            if (text.length > 800 && /\n[-•\d]/.test(text))
+              reasons.push("Well-structured content");
+
+            if (reasons.length === 0)
+              reasons.push("Best relative fit vs alternatives");
+            return reasons.slice(0, 4);
+          };
+
+          return (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-green-900 mb-1">
+                Why These Sources Were Cited
+              </h3>
+              <p className="text-sm text-green-700 mb-4">
+                Evidence-driven hypotheses based on claim coverage, authority,
+                freshness, and intent match.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {citedSources.slice(0, 10).map((s: any, i: number) => (
+                  <div
+                    key={s.source_id || i}
+                    className="bg-white rounded-lg p-4 border border-green-200"
+                  >
+                    <div
+                      className="font-medium text-green-900 truncate"
+                      title={s.title || s.url}
+                    >
+                      {s.title || s.url}
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      {s.domain}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {reasonFor(s).map((r, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 border border-green-200"
+                        >
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {citedSources.length > 10 && (
+                <div className="text-xs text-green-700 mt-3">
+                  + {citedSources.length - 10} more not shown
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Why Sources Get Ignored (Not Cited) */}
+        {(() => {
+          const citedIds = new Set(
+            (bundle.evidence || []).map((e: any) => e.source_id)
+          );
+          const allSources = (bundle.sources || []) as any[];
+          const uncited = allSources.filter(
+            (s: any) => !citedIds.has(s.source_id)
+          );
+          if (uncited.length === 0) return null;
+
+          const toDate = (iso?: string) => {
+            if (!iso) return null;
+            try {
+              return new Date(iso.endsWith("Z") ? iso : iso + "Z");
+            } catch {
+              return null;
+            }
+          };
+
+          const citedDomains = new Set(
+            allSources
+              .filter((s: any) => citedIds.has(s.source_id))
+              .map((s: any) => s.domain)
+          );
+
+          const reasonFor = (s: any): string => {
+            const text: string = (s.raw_text || "").toString();
+            const url: string = (s.url || "").toLowerCase();
+            const domain: string = (s.domain || "").toLowerCase();
+            const credibility = (s.credibility || {}).score ?? 0.5;
+            const published = toDate(s.published_at);
+            const yearsOld = published
+              ? (Date.now() - published.getTime()) / (1000 * 60 * 60 * 24 * 365)
+              : null;
+
+            if (s.paywall === true || url.includes("paywall"))
+              return "Paywalled / not accessible";
+            if (text.length < 500) return "Thin content (not enough substance)";
+            if (
+              domain.includes("blog") ||
+              url.includes("/blog/") ||
+              url.includes("/newsroom/")
+            )
+              return "Promotional/blog content";
+            if (credibility < 0.6) return "Lower perceived authority";
+            if (yearsOld !== null && yearsOld > 5) return "Likely outdated";
+            if (citedDomains.has(s.domain))
+              return "Duplicate coverage vs. already cited domain";
+            return "Lower relevance vs. alternatives";
+          };
+
+          return (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-red-900 mb-1">
+                Why Sources Get Ignored (Not Cited)
+              </h3>
+              <p className="text-sm text-red-700 mb-4">
+                These were discovered but not referenced in the answer.
+                Heuristics below explain likely reasons.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {uncited.slice(0, 10).map((s: any, i: number) => (
+                  <div
+                    key={s.source_id || i}
+                    className="bg-white rounded-lg p-4 border border-red-200"
+                  >
+                    <div
+                      className="font-medium text-red-900 truncate"
+                      title={s.title || s.url}
+                    >
+                      {s.title || s.url}
+                    </div>
+                    <div className="text-xs text-red-600 mt-1">{s.domain}</div>
+                    <div className="mt-2 inline-flex items-center gap-2">
+                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200">
+                        {reasonFor(s)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {uncited.length > 10 && (
+                <div className="text-xs text-red-600 mt-3">
+                  + {uncited.length - 10} more not shown
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* AI Search Mechanism Analysis */}
         {analysisData.ai_search_intelligence && (
           <div className="border border-purple-200 bg-purple-50 rounded-lg p-4">

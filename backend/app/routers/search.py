@@ -5,6 +5,7 @@ from ..services.search_pipeline import run_search, fetch_top
 from ..services.providers.base import ProviderResult
 from ..services.composer import compose_answer
 from urllib.parse import urlparse
+import os
 import uuid
 from datetime import datetime
 import os
@@ -24,6 +25,7 @@ def get_openai_client():
 class SearchRequest(BaseModel):
     query: str
     filters: dict | None = None
+    force: bool | None = False
 
 
 class SearchResponse(BaseModel):
@@ -35,6 +37,15 @@ def create_run(body: SearchRequest) -> SearchResponse:
     # Attempt provider search first; if empty, fall back to mock demo
     # For now this is synchronous wrapper; can move to background tasks later
     import asyncio
+
+    # Dedupe: if force not set, return last run_id for same query hash
+    from ..core.cache import CACHE
+    import hashlib
+    qhash = hashlib.sha256((body.query.strip().lower() + os.getenv("PIPELINE_VERSION", "1")).encode()).hexdigest()
+    if not body.force:
+        existing = CACHE.get(CACHE.ai_key(f"query_hash:{qhash}"))
+        if existing:
+            return SearchResponse(run_id=existing)
 
     try:
         results: list[ProviderResult] = asyncio.run(run_search(body.query))
@@ -142,7 +153,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
             "provider_results": [],
             "fetched_docs": [],
         }
-
+    # Persist run bundle (both branches)
     run_id = STORE.create_run(final_bundle)
     return SearchResponse(run_id=run_id)
 
