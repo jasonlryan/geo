@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createRun, getRunBundle, apiBaseUrl } from "@/lib/api";
 import ExportsBar from "@/components/ExportsBar";
 import ViewReport from "@/components/ViewReport";
+import Card, { CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Spinner from "@/components/ui/Spinner";
 // Insights is now a dedicated route: /insights
 
 export default function SearchPage() {
@@ -251,29 +254,8 @@ export default function SearchPage() {
       </form>
 
       {loading && (
-        <div
-          className="flex items-center gap-2 text-sm text-gray-700"
-          role="status"
-          aria-live="polite"
-        >
-          <svg
-            className="animate-spin h-4 w-4 text-gray-600"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-            ></path>
-          </svg>
+        <div className="flex items-center gap-2 text-sm text-gray-700" role="status" aria-live="polite">
+          <Spinner />
           <span>Running search…</span>
         </div>
       )}
@@ -283,36 +265,36 @@ export default function SearchPage() {
       {bundle && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-4">
-            <section className="bg-white rounded border p-4">
-              <h2 className="font-medium mb-2">Answer</h2>
-              <div
-                className="leading-relaxed prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: answerHtml }}
-              />
-              <div className="text-xs text-gray-500 mt-2">
-                Run ID: {bundle.run_id} · API: {apiBaseUrl} ·{" "}
-                <a className="underline" href={`/trace/${bundle.run_id}`}>
-                  View trace
-                </a>
-              </div>
-              <div className="mt-3">
-                <ExportsBar bundle={bundle} />
-              </div>
-            </section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Answer</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="leading-relaxed prose max-w-none" dangerouslySetInnerHTML={{ __html: answerHtml }} />
+                <div className="text-xs text-gray-500">
+                  Run ID: {bundle.run_id} · API: {apiBaseUrl} · {" "}
+                  <a className="underline" href={`/trace/${bundle.run_id}`}>View trace</a>
+                </div>
+                <div className="pt-2">
+                  <ExportsBar bundle={bundle} />
+                </div>
+              </CardBody>
+            </Card>
 
-            <section className="bg-white rounded border p-4">
-              <h3 className="font-medium mb-2">Claims</h3>
-              <ul className="space-y-2 list-disc pl-5">
-                {claimsList.map((c: any) => (
-                  <li key={c.claim_id}>
-                    <span className="font-medium">
-                      #{c.answer_sentence_index + 1}:
-                    </span>{" "}
-                    {c.text}
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Claims</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <ul className="space-y-2 list-disc pl-5">
+                  {claimsList.map((c: any) => (
+                    <li key={c.claim_id}>
+                      <span className="font-medium">#{c.answer_sentence_index + 1}:</span> {c.text}
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
           </div>
 
           <aside className="space-y-4 lg:col-span-5">
