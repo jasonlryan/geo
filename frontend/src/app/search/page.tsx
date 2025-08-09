@@ -41,7 +41,7 @@ export default function SearchPage() {
     setError(null);
     setBundle(null);
     try {
-      const { run_id } = await createRun(q);
+      const { run_id } = await createRun(q, true);
       const data = await getRunBundle(run_id);
       setBundle({ run_id, ...data });
       try {

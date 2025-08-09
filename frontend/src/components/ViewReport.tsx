@@ -1022,137 +1022,136 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
             <CardTitle>Immediate Action Plan</CardTitle>
           </CardHeader>
           <CardBody>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>🎯 This Quarter's Priorities</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="space-y-3">
+                    {bundle.sources?.length === 0 ? (
+                      <>
+                        <div className="bg-blue-100 rounded p-3">
+                          <p className="font-medium text-blue-800">
+                            1. Create Foundational Content
+                          </p>
+                          <p className="text-blue-700 text-sm mt-1">
+                            Be the first authoritative source on this topic
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2">
+                            Priority: HIGH • Timeline: 4-6 weeks
+                          </div>
+                        </div>
+                        <div className="bg-blue-100 rounded p-3">
+                          <p className="font-medium text-blue-800">
+                            2. Optimize for AI Discovery
+                          </p>
+                          <p className="text-blue-700 text-sm mt-1">
+                            Structure content for AI comprehension
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2">
+                            Priority: HIGH • Timeline: 2-3 weeks
+                          </div>
+                        </div>
+                      </>
+                    ) : bundle.sources.length < 5 ? (
+                      <>
+                        <div className="bg-blue-100 rounded p-3">
+                          <p className="font-medium text-blue-800">
+                            1. Competitive Analysis
+                          </p>
+                          <p className="text-blue-700 text-sm mt-1">
+                            Study top-ranking content gaps
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2">
+                            Priority: HIGH • Timeline: 1-2 weeks
+                          </div>
+                        </div>
+                        <div className="bg-blue-100 rounded p-3">
+                          <p className="font-medium text-blue-800">
+                            2. Create Superior Content
+                          </p>
+                          <p className="text-blue-700 text-sm mt-1">
+                            Outperform existing sources
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2">
+                            Priority: HIGH • Timeline: 4-8 weeks
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-blue-100 rounded p-3">
+                          <p className="font-medium text-blue-800">
+                            1. Find Unique Angles
+                          </p>
+                          <p className="text-blue-700 text-sm mt-1">
+                            Highly competitive - need differentiation
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2">
+                            Priority: HIGH • Timeline: 2-3 weeks
+                          </div>
+                        </div>
+                        <div className="bg-blue-100 rounded p-3">
+                          <p className="font-medium text-blue-800">
+                            2. Partner Strategy
+                          </p>
+                          <p className="text-blue-700 text-sm mt-1">
+                            Collaborate with authority domains
+                          </p>
+                          <div className="text-xs text-blue-600 mt-2">
+                            Priority: MEDIUM • Timeline: 6-12 weeks
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>🎯 This Quarter's Priorities</CardTitle>
-              </CardHeader>
-              <CardBody>
-              <div className="space-y-3">
-                {bundle.sources?.length === 0 ? (
-                  <>
-                    <div className="bg-blue-100 rounded p-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>📊 Success Metrics</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="space-y-3 text-sm">
+                    <div>
                       <p className="font-medium text-blue-800">
-                        1. Create Foundational Content
+                        Track AI Citations
                       </p>
-                      <p className="text-blue-700 text-sm mt-1">
-                        Be the first authoritative source on this topic
+                      <p className="text-blue-700">
+                        Monitor mentions in AI search results
                       </p>
-                      <div className="text-xs text-blue-600 mt-2">
-                        Priority: HIGH • Timeline: 4-6 weeks
-                      </div>
                     </div>
-                    <div className="bg-blue-100 rounded p-3">
+                    <div>
                       <p className="font-medium text-blue-800">
-                        2. Optimize for AI Discovery
+                        Content Performance
                       </p>
-                      <p className="text-blue-700 text-sm mt-1">
-                        Structure content for AI comprehension
+                      <p className="text-blue-700">
+                        Measure engagement and authority signals
                       </p>
-                      <div className="text-xs text-blue-600 mt-2">
-                        Priority: HIGH • Timeline: 2-3 weeks
-                      </div>
                     </div>
-                  </>
-                ) : bundle.sources.length < 5 ? (
-                  <>
-                    <div className="bg-blue-100 rounded p-3">
+                    <div>
                       <p className="font-medium text-blue-800">
-                        1. Competitive Analysis
+                        Competitive Position
                       </p>
-                      <p className="text-blue-700 text-sm mt-1">
-                        Study top-ranking content gaps
+                      <p className="text-blue-700">
+                        Track ranking vs. competitor content
                       </p>
-                      <div className="text-xs text-blue-600 mt-2">
-                        Priority: HIGH • Timeline: 1-2 weeks
-                      </div>
                     </div>
-                    <div className="bg-blue-100 rounded p-3">
-                      <p className="font-medium text-blue-800">
-                        2. Create Superior Content
+                    <div className="bg-blue-100 rounded p-2 mt-3">
+                      <p className="text-xs font-medium text-blue-800">
+                        💡 Pro Tip
                       </p>
-                      <p className="text-blue-700 text-sm mt-1">
-                        Outperform existing sources
+                      <p className="text-xs text-blue-700">
+                        Run this analysis monthly to track progress and identify
+                        new opportunities
                       </p>
-                      <div className="text-xs text-blue-600 mt-2">
-                        Priority: HIGH • Timeline: 4-8 weeks
-                      </div>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="bg-blue-100 rounded p-3">
-                      <p className="font-medium text-blue-800">
-                        1. Find Unique Angles
-                      </p>
-                      <p className="text-blue-700 text-sm mt-1">
-                        Highly competitive - need differentiation
-                      </p>
-                      <div className="text-xs text-blue-600 mt-2">
-                        Priority: HIGH • Timeline: 2-3 weeks
-                      </div>
-                    </div>
-                    <div className="bg-blue-100 rounded p-3">
-                      <p className="font-medium text-blue-800">
-                        2. Partner Strategy
-                      </p>
-                      <p className="text-blue-700 text-sm mt-1">
-                        Collaborate with authority domains
-                      </p>
-                      <div className="text-xs text-blue-600 mt-2">
-                        Priority: MEDIUM • Timeline: 6-12 weeks
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>📊 Success Metrics</CardTitle>
-              </CardHeader>
-              <CardBody>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="font-medium text-blue-800">
-                    Track AI Citations
-                  </p>
-                  <p className="text-blue-700">
-                    Monitor mentions in AI search results
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-blue-800">
-                    Content Performance
-                  </p>
-                  <p className="text-blue-700">
-                    Measure engagement and authority signals
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-blue-800">
-                    Competitive Position
-                  </p>
-                  <p className="text-blue-700">
-                    Track ranking vs. competitor content
-                  </p>
-                </div>
-                <div className="bg-blue-100 rounded p-2 mt-3">
-                  <p className="text-xs font-medium text-blue-800">
-                    💡 Pro Tip
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    Run this analysis monthly to track progress and identify new
-                    opportunities
-                  </p>
-                </div>
-              </div>
-              </CardBody>
-            </Card>
-          </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
           </CardBody>
         </Card>
 
@@ -1163,47 +1162,50 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
               <CardTitle>Who's Winning AI Search and Why?</CardTitle>
             </CardHeader>
             <CardBody>
-            <p className="text-sm text-orange-700 mb-3">
-              Analysis of which publishers are most successful at getting cited
-              by AI, and what strategies they use.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <h5 className="font-medium text-orange-700 mb-2">
-                  Winning Publishers
-                </h5>
-                <div className="space-y-2">
-                  {(analysisData.visibility_intelligence?.winning_domains || [])
-                    .slice(0, 5)
-                    .map((winner: any, i: number) => (
-                      <div key={i} className="bg-white border rounded p-2">
-                        <div className="font-medium text-orange-900">
-                          {winner.domain}
+              <p className="text-sm text-orange-700 mb-3">
+                Analysis of which publishers are most successful at getting
+                cited by AI, and what strategies they use.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h5 className="font-medium text-orange-700 mb-2">
+                    Winning Publishers
+                  </h5>
+                  <div className="space-y-2">
+                    {(
+                      analysisData.visibility_intelligence?.winning_domains ||
+                      []
+                    )
+                      .slice(0, 5)
+                      .map((winner: any, i: number) => (
+                        <div key={i} className="bg-white border rounded p-2">
+                          <div className="font-medium text-orange-900">
+                            {winner.domain}
+                          </div>
+                          <div className="text-xs text-orange-600">
+                            {winner.citations} citations ·{" "}
+                            {winner.success_factors?.join(", ")}
+                          </div>
                         </div>
-                        <div className="text-xs text-orange-600">
-                          {winner.citations} citations ·{" "}
-                          {winner.success_factors?.join(", ")}
-                        </div>
+                      ))}
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-orange-700 mb-2">
+                    Market Gaps
+                  </h5>
+                  <div className="space-y-1">
+                    {(
+                      analysisData.ai_search_intelligence.competitive_landscape
+                        .market_gaps || []
+                    ).map((gap: string, i: number) => (
+                      <div key={i} className="text-orange-600">
+                        • {gap}
                       </div>
                     ))}
+                  </div>
                 </div>
               </div>
-              <div>
-                <h5 className="font-medium text-orange-700 mb-2">
-                  Market Gaps
-                </h5>
-                <div className="space-y-1">
-                  {(
-                    analysisData.ai_search_intelligence.competitive_landscape
-                      .market_gaps || []
-                  ).map((gap: string, i: number) => (
-                    <div key={i} className="text-orange-600">
-                      • {gap}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
             </CardBody>
           </Card>
         )}
@@ -1211,122 +1213,130 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
         {/* AI Selection Performance by Type */}
         <Card>
           <CardHeader>
-            <CardTitle>Which Source Types Have the Best AI Selection Rates?</CardTitle>
+            <CardTitle>
+              Which Source Types Have the Best AI Selection Rates?
+            </CardTitle>
           </CardHeader>
           <CardBody>
-          <p className="text-sm text-gray-700 mb-3">
-            Data showing which types of content sources are most likely to be
-            selected and cited by AI search engines.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <h5 className="font-medium text-gray-700 mb-2">
-                High Performing Types
-              </h5>
-              <div className="space-y-1">
-                {(
-                  analysisData.mechanism_insights?.content_performance
-                    ?.high_performing_types || []
-                ).map((type: any, i: number) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <span className="text-gray-600 capitalize">
-                      {type.type}
-                    </span>
-                    <span className="font-medium text-green-600">
-                      {Math.round(type.citation_rate * 100)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-700 mb-2">
-                Source Type Breakdown
-              </h5>
-              <div className="space-y-1">
-                {Object.entries(analysisData.source_breakdown?.by_type || {})
-                  .filter(([_, v]) => (v as number) > 0)
-                  .map(([type, count]) => (
-                    <div
-                      key={type}
-                      className="flex justify-between items-center"
-                    >
-                      <span className="text-gray-600 capitalize">{type}</span>
-                      <span className="font-medium">{count as number}</span>
+            <p className="text-sm text-gray-700 mb-3">
+              Data showing which types of content sources are most likely to be
+              selected and cited by AI search engines.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h5 className="font-medium text-gray-700 mb-2">
+                  High Performing Types
+                </h5>
+                <div className="space-y-1">
+                  {(
+                    analysisData.mechanism_insights?.content_performance
+                      ?.high_performing_types || []
+                  ).map((type: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center">
+                      <span className="text-gray-600 capitalize">
+                        {type.type}
+                      </span>
+                      <span className="font-medium text-green-600">
+                        {Math.round(type.citation_rate * 100)}%
+                      </span>
                     </div>
                   ))}
+                </div>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-700 mb-2">
+                  Source Type Breakdown
+                </h5>
+                <div className="space-y-1">
+                  {Object.entries(analysisData.source_breakdown?.by_type || {})
+                    .filter(([_, v]) => (v as number) > 0)
+                    .map(([type, count]) => (
+                      <div
+                        key={type}
+                        className="flex justify-between items-center"
+                      >
+                        <span className="text-gray-600 capitalize">{type}</span>
+                        <span className="font-medium">{count as number}</span>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-          </div>
           </CardBody>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Complete Source Analysis - What AI Actually Selected</CardTitle>
+            <CardTitle>
+              Complete Source Analysis - What AI Actually Selected
+            </CardTitle>
           </CardHeader>
           <CardBody>
-          <p className="text-sm text-gray-700 mb-3">
-            Full breakdown of every source that was cited by AI for this query,
-            showing the exact characteristics that led to selection.
-          </p>
-          <div className="overflow-auto">
-            <table className="min-w-full text-xs">
-              <thead>
-                <tr className="text-left text-gray-600">
-                  <th className="px-2 py-1">#</th>
-                  <th className="px-2 py-1">Title</th>
-                  <th className="px-2 py-1">Domain</th>
-                  <th className="px-2 py-1">Type</th>
-                  <th className="px-2 py-1">Cred</th>
-                  <th className="px-2 py-1">Link</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(bundle.sources || []).map((s: any, i: number) => (
-                  <tr key={s.source_id} className="border-t">
-                    <td className="px-2 py-1 align-top">{i + 1}</td>
-                    <td className="px-2 py-1 align-top">{s.title || s.url}</td>
-                    <td className="px-2 py-1 align-top">{s.domain}</td>
-                    <td className="px-2 py-1 align-top">
-                      {s.media_type || "-"}
-                    </td>
-                    <td className="px-2 py-1 align-top">
-                      {(s.credibility?.band || "").toString()}
-                    </td>
-                    <td className="px-2 py-1 align-top">
-                      <a className="underline" href={s.url} target="_blank">
-                        open
-                      </a>
-                    </td>
+            <p className="text-sm text-gray-700 mb-3">
+              Full breakdown of every source that was cited by AI for this
+              query, showing the exact characteristics that led to selection.
+            </p>
+            <div className="overflow-auto">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-2 py-1">#</th>
+                    <th className="px-2 py-1">Title</th>
+                    <th className="px-2 py-1">Domain</th>
+                    <th className="px-2 py-1">Type</th>
+                    <th className="px-2 py-1">Cred</th>
+                    <th className="px-2 py-1">Link</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(bundle.sources || []).map((s: any, i: number) => (
+                    <tr key={s.source_id} className="border-t">
+                      <td className="px-2 py-1 align-top">{i + 1}</td>
+                      <td className="px-2 py-1 align-top">
+                        {s.title || s.url}
+                      </td>
+                      <td className="px-2 py-1 align-top">{s.domain}</td>
+                      <td className="px-2 py-1 align-top">
+                        {s.media_type || "-"}
+                      </td>
+                      <td className="px-2 py-1 align-top">
+                        {(s.credibility?.band || "").toString()}
+                      </td>
+                      <td className="px-2 py-1 align-top">
+                        <a className="underline" href={s.url} target="_blank">
+                          open
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardBody>
         </Card>
 
         {analysisData.panels?.notable_citations?.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Gold Standard Sources - What AI Considers Most Authoritative</CardTitle>
+              <CardTitle>
+                Gold Standard Sources - What AI Considers Most Authoritative
+              </CardTitle>
             </CardHeader>
             <CardBody>
-            <p className="text-sm text-yellow-700 mb-3">
-              The highest-quality sources identified by AI search, showing what
-              characteristics make content most trustworthy.
-            </p>
-            <div className="space-y-2 text-sm">
-              {analysisData.panels.notable_citations.map(
-                (citation: any, i: number) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="text-yellow-500 text-xs mt-1">🏆</span>
-                    <span className="text-yellow-700">{citation.reason}</span>
-                  </div>
-                )
-              )}
-            </div>
+              <p className="text-sm text-yellow-700 mb-3">
+                The highest-quality sources identified by AI search, showing
+                what characteristics make content most trustworthy.
+              </p>
+              <div className="space-y-2 text-sm">
+                {analysisData.panels.notable_citations.map(
+                  (citation: any, i: number) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-yellow-500 text-xs mt-1">🏆</span>
+                      <span className="text-yellow-700">{citation.reason}</span>
+                    </div>
+                  )
+                )}
+              </div>
             </CardBody>
           </Card>
         )}

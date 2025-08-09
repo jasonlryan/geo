@@ -8,11 +8,11 @@ async function json<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-export async function createRun(query: string): Promise<{ run_id: string }> {
+export async function createRun(query: string, force: boolean = true): Promise<{ run_id: string }> {
   const res = await fetch(`${apiBaseUrl}/api/search/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, force }),
     cache: "no-store",
   });
   return json(res);
