@@ -104,521 +104,529 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
               <CardTitle>Who Actually Gets Cited?</CardTitle>
             </CardHeader>
             <CardBody>
-              <p className="text-sm text-orange-700 mb-2">Analysis of sources that AI actually referenced in the answer</p>
+              <p className="text-sm text-orange-700 mb-2">
+                Analysis of sources that AI actually referenced in the answer
+              </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>🏆 Cited Sources Only</CardTitle>
-                </CardHeader>
-                <CardBody>
-                <div className="space-y-2">
-                  {(() => {
-                    // Get ONLY sources that were actually cited
-                    const citedSourceIds = new Set(
-                      bundle.evidence.map((e: any) => e.source_id)
-                    );
-                    const citedSources =
-                      bundle.sources?.filter((s: any) =>
-                        citedSourceIds.has(s.source_id)
-                      ) || [];
-
-                    return Array.from(
-                      new Set(citedSources.map((s: any) => s.domain))
-                    )
-                      .slice(0, 5)
-                      .map((domain: string, i: number) => {
-                        const domainSources = citedSources.filter(
-                          (s: any) => s.domain === domain
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>🏆 Cited Sources Only</CardTitle>
+                  </CardHeader>
+                  <CardBody>
+                    <div className="space-y-2">
+                      {(() => {
+                        // Get ONLY sources that were actually cited
+                        const citedSourceIds = new Set(
+                          bundle.evidence.map((e: any) => e.source_id)
                         );
-                        const citationCount =
-                          bundle.evidence?.filter((e: any) =>
-                            domainSources.some(
-                              (ds: any) => ds.source_id === e.source_id
-                            )
-                          ).length || 0;
+                        const citedSources =
+                          bundle.sources?.filter((s: any) =>
+                            citedSourceIds.has(s.source_id)
+                          ) || [];
 
-                        return (
-                          <div
-                            key={i}
-                            className="flex justify-between items-center py-2 border-b border-orange-100 last:border-b-0"
-                          >
-                            <div>
-                              <div className="font-medium text-orange-900">
-                                {domain}
-                              </div>
-                              <div className="text-xs text-orange-600">
-                                {domainSources.length} source
-                                {domainSources.length !== 1 ? "s" : ""} •{" "}
-                                {citationCount} citation
-                                {citationCount !== 1 ? "s" : ""}
-                              </div>
-                            </div>
-                            <div className="text-sm font-bold text-orange-700">
-                              #{i + 1}
-                            </div>
-                          </div>
-                        );
-                      });
-                  })()}
-                </div>
-                </CardBody>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>📊 Citation Authority Breakdown</CardTitle>
-                </CardHeader>
-                <CardBody>
-                <div className="space-y-2">
-                  {(() => {
-                    // Much more granular categorization based on actual domain patterns
-                    const categorizeSource = (domain: string) => {
-                      const d = domain.toLowerCase();
-
-                      // Government & Academic (highest authority)
-                      if (
-                        d.includes(".gov") ||
-                        d.includes(".mil") ||
-                        d.endsWith(".gov")
-                      )
-                        return "Government";
-                      if (
-                        d.includes(".edu") ||
-                        d.includes("university") ||
-                        d.includes("college") ||
-                        d.includes("harvard") ||
-                        d.includes("stanford") ||
-                        d.includes("mit.edu")
-                      )
-                        return "Academic";
-
-                      // News & Media (credible journalism)
-                      if (
-                        d.includes("reuters") ||
-                        d.includes("bloomberg") ||
-                        d.includes("wsj") ||
-                        d.includes("ft.com") ||
-                        d.includes("cnbc") ||
-                        d.includes("economist") ||
-                        d.includes("guardian") ||
-                        d.includes("nytimes") ||
-                        d.includes("washingtonpost")
-                      )
-                        return "Financial News";
-                      if (
-                        d.includes("bbc") ||
-                        d.includes("cnn") ||
-                        d.includes("npr") ||
-                        d.includes("apnews") ||
-                        d.includes("axios") ||
-                        d.includes("politico")
-                      )
-                        return "Mainstream News";
-                      if (
-                        d.includes("techcrunch") ||
-                        d.includes("wired") ||
-                        d.includes("ars-technica") ||
-                        d.includes("venturebeat") ||
-                        d.includes("theverge")
-                      )
-                        return "Tech Media";
-
-                      // Industry Authority (business thought leadership)
-                      if (
-                        d.includes("mckinsey") ||
-                        d.includes("bcg") ||
-                        d.includes("bain") ||
-                        d.includes("kpmg") ||
-                        d.includes("deloitte") ||
-                        d.includes("pwc") ||
-                        d.includes("ey.com")
-                      )
-                        return "Management Consulting";
-                      if (
-                        d.includes("kornferry") ||
-                        d.includes("russell") ||
-                        d.includes("egon") ||
-                        d.includes("heidrick") ||
-                        d.includes("spencer") ||
-                        d.includes("exec") ||
-                        d.includes("talent")
-                      )
-                        return "Executive Search";
-                      if (
-                        d.includes("forbes") ||
-                        d.includes("fortune") ||
-                        d.includes("inc.com") ||
-                        d.includes("entrepreneur") ||
-                        d.includes("fastcompany") ||
-                        d.includes("hbr.org") ||
-                        d.includes("strategy")
-                      )
-                        return "Business Media";
-
-                      // Reference & Knowledge
-                      if (
-                        d.includes("wikipedia") ||
-                        d.includes("britannica") ||
-                        d.includes("investopedia") ||
-                        d.includes("dictionary")
-                      )
-                        return "Reference";
-
-                      // Professional Networks
-                      if (
-                        d.includes("linkedin") ||
-                        d.includes("glassdoor") ||
-                        d.includes("indeed") ||
-                        d.includes("monster")
-                      )
-                        return "Professional Networks";
-
-                      // Social & Community
-                      if (
-                        d.includes("twitter") ||
-                        d.includes("facebook") ||
-                        d.includes("reddit") ||
-                        d.includes("quora") ||
-                        d.includes("stackexchange")
-                      )
-                        return "Social Platforms";
-
-                      // Content Platforms
-                      if (
-                        d.includes("medium") ||
-                        d.includes("substack") ||
-                        d.includes("blog") ||
-                        d.includes("wordpress") ||
-                        d.includes("blogger")
-                      )
-                        return "Blog Platforms";
-
-                      // Software/SaaS companies
-                      if (
-                        d.includes("salesforce") ||
-                        d.includes("microsoft") ||
-                        d.includes("google") ||
-                        d.includes("amazon") ||
-                        d.includes("oracle") ||
-                        d.includes("sap") ||
-                        d.includes("adobe")
-                      )
-                        return "Tech Giants";
-
-                      // Industry associations & organizations
-                      if (
-                        d.includes("institute") ||
-                        d.includes("association") ||
-                        d.includes("society") ||
-                        d.includes("foundation") ||
-                        d.includes("council") ||
-                        d.includes(".org")
-                      )
-                        return "Industry Organizations";
-
-                      // Everything else gets categorized by TLD or domain pattern
-                      if (d.includes(".com") && !d.includes("www.")) {
-                        // Try to identify specific industry patterns
-                        if (
-                          d.includes("hr") ||
-                          d.includes("talent") ||
-                          d.includes("people") ||
-                          d.includes("workforce")
+                        return Array.from(
+                          new Set(citedSources.map((s: any) => s.domain))
                         )
-                          return "HR/Talent";
-                        if (
-                          d.includes("finance") ||
-                          d.includes("capital") ||
-                          d.includes("investment") ||
-                          d.includes("fund")
-                        )
-                          return "Financial Services";
-                        if (
-                          d.includes("law") ||
-                          d.includes("legal") ||
-                          d.includes("attorney")
-                        )
-                          return "Legal";
-                        if (
-                          d.includes("health") ||
-                          d.includes("medical") ||
-                          d.includes("pharma")
-                        )
-                          return "Healthcare";
-                        return "Corporate Websites";
-                      }
+                          .slice(0, 5)
+                          .map((domain: string, i: number) => {
+                            const domainSources = citedSources.filter(
+                              (s: any) => s.domain === domain
+                            );
+                            const citationCount =
+                              bundle.evidence?.filter((e: any) =>
+                                domainSources.some(
+                                  (ds: any) => ds.source_id === e.source_id
+                                )
+                              ).length || 0;
 
-                      return "Other";
-                    };
-
-                    const categories = bundle.sources.reduce(
-                      (acc: any, source: any) => {
-                        const category = categorizeSource(source.domain);
-                        acc[category] = (acc[category] || 0) + 1;
-                        return acc;
-                      },
-                      {}
-                    );
-
-                    const sortedCategories = Object.entries(categories)
-                      .sort(([, a], [, b]) => (b as number) - (a as number))
-                      .slice(0, 6);
-
-                    const getColorClass = (category: string) => {
-                      switch (category) {
-                        case "Government":
-                          return "bg-green-600";
-                        case "Academic":
-                          return "bg-green-500";
-                        case "Management Consulting":
-                          return "bg-blue-600";
-                        case "Executive Search":
-                          return "bg-blue-500";
-                        case "Business Media":
-                          return "bg-purple-600";
-                        case "Financial News":
-                          return "bg-purple-500";
-                        case "Mainstream News":
-                          return "bg-red-500";
-                        case "Tech Media":
-                          return "bg-cyan-500";
-                        case "Tech Giants":
-                          return "bg-indigo-600";
-                        case "Reference":
-                          return "bg-yellow-500";
-                        case "Professional Networks":
-                          return "bg-orange-600";
-                        case "Social Platforms":
-                          return "bg-orange-400";
-                        case "Blog Platforms":
-                          return "bg-pink-500";
-                        case "Industry Organizations":
-                          return "bg-emerald-500";
-                        case "HR/Talent":
-                          return "bg-teal-500";
-                        case "Financial Services":
-                          return "bg-slate-600";
-                        case "Legal":
-                          return "bg-amber-600";
-                        case "Healthcare":
-                          return "bg-rose-500";
-                        case "Corporate Websites":
-                          return "bg-gray-500";
-                        default:
-                          return "bg-gray-400";
-                      }
-                    };
-
-                    return sortedCategories.map(([category, count], i) => {
-                      const percentage = Math.round(
-                        ((count as number) / bundle.sources.length) * 100
-                      );
-
-                      return (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-sm font-medium text-orange-900">
-                            {category}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-orange-700">
-                              {count as number}
-                            </span>
-                            <div className="w-16 bg-orange-100 rounded-full h-2">
+                            return (
                               <div
-                                className={`${getColorClass(
-                                  category
-                                )} h-2 rounded-full`}
-                                style={{ width: `${percentage}%` }}
-                              ></div>
+                                key={i}
+                                className="flex justify-between items-center py-2 border-b border-orange-100 last:border-b-0"
+                              >
+                                <div>
+                                  <div className="font-medium text-orange-900">
+                                    {domain}
+                                  </div>
+                                  <div className="text-xs text-orange-600">
+                                    {domainSources.length} source
+                                    {domainSources.length !== 1
+                                      ? "s"
+                                      : ""} • {citationCount} citation
+                                    {citationCount !== 1 ? "s" : ""}
+                                  </div>
+                                </div>
+                                <div className="text-sm font-bold text-orange-700">
+                                  #{i + 1}
+                                </div>
+                              </div>
+                            );
+                          });
+                      })()}
+                    </div>
+                  </CardBody>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>📊 Citation Authority Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardBody>
+                    <div className="space-y-2">
+                      {(() => {
+                        // Much more granular categorization based on actual domain patterns
+                        const categorizeSource = (domain: string) => {
+                          const d = domain.toLowerCase();
+
+                          // Government & Academic (highest authority)
+                          if (
+                            d.includes(".gov") ||
+                            d.includes(".mil") ||
+                            d.endsWith(".gov")
+                          )
+                            return "Government";
+                          if (
+                            d.includes(".edu") ||
+                            d.includes("university") ||
+                            d.includes("college") ||
+                            d.includes("harvard") ||
+                            d.includes("stanford") ||
+                            d.includes("mit.edu")
+                          )
+                            return "Academic";
+
+                          // News & Media (credible journalism)
+                          if (
+                            d.includes("reuters") ||
+                            d.includes("bloomberg") ||
+                            d.includes("wsj") ||
+                            d.includes("ft.com") ||
+                            d.includes("cnbc") ||
+                            d.includes("economist") ||
+                            d.includes("guardian") ||
+                            d.includes("nytimes") ||
+                            d.includes("washingtonpost")
+                          )
+                            return "Financial News";
+                          if (
+                            d.includes("bbc") ||
+                            d.includes("cnn") ||
+                            d.includes("npr") ||
+                            d.includes("apnews") ||
+                            d.includes("axios") ||
+                            d.includes("politico")
+                          )
+                            return "Mainstream News";
+                          if (
+                            d.includes("techcrunch") ||
+                            d.includes("wired") ||
+                            d.includes("ars-technica") ||
+                            d.includes("venturebeat") ||
+                            d.includes("theverge")
+                          )
+                            return "Tech Media";
+
+                          // Industry Authority (business thought leadership)
+                          if (
+                            d.includes("mckinsey") ||
+                            d.includes("bcg") ||
+                            d.includes("bain") ||
+                            d.includes("kpmg") ||
+                            d.includes("deloitte") ||
+                            d.includes("pwc") ||
+                            d.includes("ey.com")
+                          )
+                            return "Management Consulting";
+                          if (
+                            d.includes("kornferry") ||
+                            d.includes("russell") ||
+                            d.includes("egon") ||
+                            d.includes("heidrick") ||
+                            d.includes("spencer") ||
+                            d.includes("exec") ||
+                            d.includes("talent")
+                          )
+                            return "Executive Search";
+                          if (
+                            d.includes("forbes") ||
+                            d.includes("fortune") ||
+                            d.includes("inc.com") ||
+                            d.includes("entrepreneur") ||
+                            d.includes("fastcompany") ||
+                            d.includes("hbr.org") ||
+                            d.includes("strategy")
+                          )
+                            return "Business Media";
+
+                          // Reference & Knowledge
+                          if (
+                            d.includes("wikipedia") ||
+                            d.includes("britannica") ||
+                            d.includes("investopedia") ||
+                            d.includes("dictionary")
+                          )
+                            return "Reference";
+
+                          // Professional Networks
+                          if (
+                            d.includes("linkedin") ||
+                            d.includes("glassdoor") ||
+                            d.includes("indeed") ||
+                            d.includes("monster")
+                          )
+                            return "Professional Networks";
+
+                          // Social & Community
+                          if (
+                            d.includes("twitter") ||
+                            d.includes("facebook") ||
+                            d.includes("reddit") ||
+                            d.includes("quora") ||
+                            d.includes("stackexchange")
+                          )
+                            return "Social Platforms";
+
+                          // Content Platforms
+                          if (
+                            d.includes("medium") ||
+                            d.includes("substack") ||
+                            d.includes("blog") ||
+                            d.includes("wordpress") ||
+                            d.includes("blogger")
+                          )
+                            return "Blog Platforms";
+
+                          // Software/SaaS companies
+                          if (
+                            d.includes("salesforce") ||
+                            d.includes("microsoft") ||
+                            d.includes("google") ||
+                            d.includes("amazon") ||
+                            d.includes("oracle") ||
+                            d.includes("sap") ||
+                            d.includes("adobe")
+                          )
+                            return "Tech Giants";
+
+                          // Industry associations & organizations
+                          if (
+                            d.includes("institute") ||
+                            d.includes("association") ||
+                            d.includes("society") ||
+                            d.includes("foundation") ||
+                            d.includes("council") ||
+                            d.includes(".org")
+                          )
+                            return "Industry Organizations";
+
+                          // Everything else gets categorized by TLD or domain pattern
+                          if (d.includes(".com") && !d.includes("www.")) {
+                            // Try to identify specific industry patterns
+                            if (
+                              d.includes("hr") ||
+                              d.includes("talent") ||
+                              d.includes("people") ||
+                              d.includes("workforce")
+                            )
+                              return "HR/Talent";
+                            if (
+                              d.includes("finance") ||
+                              d.includes("capital") ||
+                              d.includes("investment") ||
+                              d.includes("fund")
+                            )
+                              return "Financial Services";
+                            if (
+                              d.includes("law") ||
+                              d.includes("legal") ||
+                              d.includes("attorney")
+                            )
+                              return "Legal";
+                            if (
+                              d.includes("health") ||
+                              d.includes("medical") ||
+                              d.includes("pharma")
+                            )
+                              return "Healthcare";
+                            return "Corporate Websites";
+                          }
+
+                          return "Other";
+                        };
+
+                        const categories = bundle.sources.reduce(
+                          (acc: any, source: any) => {
+                            const category = categorizeSource(source.domain);
+                            acc[category] = (acc[category] || 0) + 1;
+                            return acc;
+                          },
+                          {}
+                        );
+
+                        const sortedCategories = Object.entries(categories)
+                          .sort(([, a], [, b]) => (b as number) - (a as number))
+                          .slice(0, 6);
+
+                        const getColorClass = (category: string) => {
+                          switch (category) {
+                            case "Government":
+                              return "bg-green-600";
+                            case "Academic":
+                              return "bg-green-500";
+                            case "Management Consulting":
+                              return "bg-blue-600";
+                            case "Executive Search":
+                              return "bg-blue-500";
+                            case "Business Media":
+                              return "bg-purple-600";
+                            case "Financial News":
+                              return "bg-purple-500";
+                            case "Mainstream News":
+                              return "bg-red-500";
+                            case "Tech Media":
+                              return "bg-cyan-500";
+                            case "Tech Giants":
+                              return "bg-indigo-600";
+                            case "Reference":
+                              return "bg-yellow-500";
+                            case "Professional Networks":
+                              return "bg-orange-600";
+                            case "Social Platforms":
+                              return "bg-orange-400";
+                            case "Blog Platforms":
+                              return "bg-pink-500";
+                            case "Industry Organizations":
+                              return "bg-emerald-500";
+                            case "HR/Talent":
+                              return "bg-teal-500";
+                            case "Financial Services":
+                              return "bg-slate-600";
+                            case "Legal":
+                              return "bg-amber-600";
+                            case "Healthcare":
+                              return "bg-rose-500";
+                            case "Corporate Websites":
+                              return "bg-gray-500";
+                            default:
+                              return "bg-gray-400";
+                          }
+                        };
+
+                        return sortedCategories.map(([category, count], i) => {
+                          const percentage = Math.round(
+                            ((count as number) / bundle.sources.length) * 100
+                          );
+
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between"
+                            >
+                              <span className="text-sm font-medium text-orange-900">
+                                {category}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-orange-700">
+                                  {count as number}
+                                </span>
+                                <div className="w-16 bg-orange-100 rounded-full h-2">
+                                  <div
+                                    className={`${getColorClass(
+                                      category
+                                    )} h-2 rounded-full`}
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-xs font-bold text-orange-700 w-8">
+                                  {percentage}%
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-xs font-bold text-orange-700 w-8">
-                              {percentage}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-                <div className="mt-3 p-2 bg-orange-100 rounded text-xs text-orange-700">
-                  <span className="font-medium">💡 Marketing Insight:</span>{" "}
-                  {(() => {
-                    // Recalculate categories for the insight
-                    const categorizeSource = (domain: string) => {
-                      const d = domain.toLowerCase();
-                      if (
-                        d.includes(".gov") ||
-                        d.includes(".mil") ||
-                        d.endsWith(".gov")
-                      )
-                        return "Government";
-                      if (
-                        d.includes(".edu") ||
-                        d.includes("university") ||
-                        d.includes("college") ||
-                        d.includes("harvard") ||
-                        d.includes("stanford") ||
-                        d.includes("mit.edu")
-                      )
-                        return "Academic";
-                      if (
-                        d.includes("mckinsey") ||
-                        d.includes("bcg") ||
-                        d.includes("bain") ||
-                        d.includes("kpmg") ||
-                        d.includes("deloitte") ||
-                        d.includes("pwc") ||
-                        d.includes("ey.com")
-                      )
-                        return "Management Consulting";
-                      if (
-                        d.includes("kornferry") ||
-                        d.includes("russell") ||
-                        d.includes("egon") ||
-                        d.includes("heidrick") ||
-                        d.includes("spencer") ||
-                        d.includes("exec") ||
-                        d.includes("talent")
-                      )
-                        return "Executive Search";
-                      if (
-                        d.includes("forbes") ||
-                        d.includes("fortune") ||
-                        d.includes("inc.com") ||
-                        d.includes("entrepreneur") ||
-                        d.includes("fastcompany") ||
-                        d.includes("hbr.org") ||
-                        d.includes("strategy")
-                      )
-                        return "Business Media";
-                      if (
-                        d.includes("reuters") ||
-                        d.includes("bloomberg") ||
-                        d.includes("wsj") ||
-                        d.includes("ft.com") ||
-                        d.includes("cnbc") ||
-                        d.includes("economist") ||
-                        d.includes("guardian") ||
-                        d.includes("nytimes") ||
-                        d.includes("washingtonpost")
-                      )
-                        return "Financial News";
-                      if (
-                        d.includes("techcrunch") ||
-                        d.includes("wired") ||
-                        d.includes("ars-technica") ||
-                        d.includes("venturebeat") ||
-                        d.includes("theverge")
-                      )
-                        return "Tech Media";
-                      if (
-                        d.includes("salesforce") ||
-                        d.includes("microsoft") ||
-                        d.includes("google") ||
-                        d.includes("amazon") ||
-                        d.includes("oracle") ||
-                        d.includes("sap") ||
-                        d.includes("adobe")
-                      )
-                        return "Tech Giants";
-                      if (
-                        d.includes("linkedin") ||
-                        d.includes("glassdoor") ||
-                        d.includes("indeed") ||
-                        d.includes("monster")
-                      )
-                        return "Professional Networks";
-                      if (
-                        d.includes("twitter") ||
-                        d.includes("facebook") ||
-                        d.includes("reddit") ||
-                        d.includes("quora") ||
-                        d.includes("stackexchange")
-                      )
-                        return "Social Platforms";
-                      if (
-                        d.includes("medium") ||
-                        d.includes("substack") ||
-                        d.includes("blog") ||
-                        d.includes("wordpress") ||
-                        d.includes("blogger")
-                      )
-                        return "Blog Platforms";
-                      if (
-                        d.includes("institute") ||
-                        d.includes("association") ||
-                        d.includes("society") ||
-                        d.includes("foundation") ||
-                        d.includes("council") ||
-                        d.includes(".org")
-                      )
-                        return "Industry Organizations";
-                      return "Corporate Websites";
-                    };
+                          );
+                        });
+                      })()}
+                    </div>
+                    <div className="mt-3 p-2 bg-orange-100 rounded text-xs text-orange-700">
+                      <span className="font-medium">💡 Marketing Insight:</span>{" "}
+                      {(() => {
+                        // Recalculate categories for the insight
+                        const categorizeSource = (domain: string) => {
+                          const d = domain.toLowerCase();
+                          if (
+                            d.includes(".gov") ||
+                            d.includes(".mil") ||
+                            d.endsWith(".gov")
+                          )
+                            return "Government";
+                          if (
+                            d.includes(".edu") ||
+                            d.includes("university") ||
+                            d.includes("college") ||
+                            d.includes("harvard") ||
+                            d.includes("stanford") ||
+                            d.includes("mit.edu")
+                          )
+                            return "Academic";
+                          if (
+                            d.includes("mckinsey") ||
+                            d.includes("bcg") ||
+                            d.includes("bain") ||
+                            d.includes("kpmg") ||
+                            d.includes("deloitte") ||
+                            d.includes("pwc") ||
+                            d.includes("ey.com")
+                          )
+                            return "Management Consulting";
+                          if (
+                            d.includes("kornferry") ||
+                            d.includes("russell") ||
+                            d.includes("egon") ||
+                            d.includes("heidrick") ||
+                            d.includes("spencer") ||
+                            d.includes("exec") ||
+                            d.includes("talent")
+                          )
+                            return "Executive Search";
+                          if (
+                            d.includes("forbes") ||
+                            d.includes("fortune") ||
+                            d.includes("inc.com") ||
+                            d.includes("entrepreneur") ||
+                            d.includes("fastcompany") ||
+                            d.includes("hbr.org") ||
+                            d.includes("strategy")
+                          )
+                            return "Business Media";
+                          if (
+                            d.includes("reuters") ||
+                            d.includes("bloomberg") ||
+                            d.includes("wsj") ||
+                            d.includes("ft.com") ||
+                            d.includes("cnbc") ||
+                            d.includes("economist") ||
+                            d.includes("guardian") ||
+                            d.includes("nytimes") ||
+                            d.includes("washingtonpost")
+                          )
+                            return "Financial News";
+                          if (
+                            d.includes("techcrunch") ||
+                            d.includes("wired") ||
+                            d.includes("ars-technica") ||
+                            d.includes("venturebeat") ||
+                            d.includes("theverge")
+                          )
+                            return "Tech Media";
+                          if (
+                            d.includes("salesforce") ||
+                            d.includes("microsoft") ||
+                            d.includes("google") ||
+                            d.includes("amazon") ||
+                            d.includes("oracle") ||
+                            d.includes("sap") ||
+                            d.includes("adobe")
+                          )
+                            return "Tech Giants";
+                          if (
+                            d.includes("linkedin") ||
+                            d.includes("glassdoor") ||
+                            d.includes("indeed") ||
+                            d.includes("monster")
+                          )
+                            return "Professional Networks";
+                          if (
+                            d.includes("twitter") ||
+                            d.includes("facebook") ||
+                            d.includes("reddit") ||
+                            d.includes("quora") ||
+                            d.includes("stackexchange")
+                          )
+                            return "Social Platforms";
+                          if (
+                            d.includes("medium") ||
+                            d.includes("substack") ||
+                            d.includes("blog") ||
+                            d.includes("wordpress") ||
+                            d.includes("blogger")
+                          )
+                            return "Blog Platforms";
+                          if (
+                            d.includes("institute") ||
+                            d.includes("association") ||
+                            d.includes("society") ||
+                            d.includes("foundation") ||
+                            d.includes("council") ||
+                            d.includes(".org")
+                          )
+                            return "Industry Organizations";
+                          return "Corporate Websites";
+                        };
 
-                    const insightCategories = bundle.sources.reduce(
-                      (acc: any, source: any) => {
-                        const category = categorizeSource(source.domain);
-                        acc[category] = (acc[category] || 0) + 1;
-                        return acc;
-                      },
-                      {}
-                    );
+                        const insightCategories = bundle.sources.reduce(
+                          (acc: any, source: any) => {
+                            const category = categorizeSource(source.domain);
+                            acc[category] = (acc[category] || 0) + 1;
+                            return acc;
+                          },
+                          {}
+                        );
 
-                    const topCategory = Object.entries(insightCategories).sort(
-                      ([, a], [, b]) => (b as number) - (a as number)
-                    )[0];
+                        const topCategory = Object.entries(
+                          insightCategories
+                        ).sort(
+                          ([, a], [, b]) => (b as number) - (a as number)
+                        )[0];
 
-                    if (!topCategory) return "No sources to analyze";
+                        if (!topCategory) return "No sources to analyze";
 
-                    const topCategoryName = topCategory[0];
-                    const topCategoryPercent = Math.round(
-                      ((topCategory[1] as number) / bundle.sources.length) * 100
-                    );
+                        const topCategoryName = topCategory[0];
+                        const topCategoryPercent = Math.round(
+                          ((topCategory[1] as number) / bundle.sources.length) *
+                            100
+                        );
 
-                    if (
-                      topCategoryName === "Government" ||
-                      topCategoryName === "Academic"
-                    ) {
-                      return `${topCategoryPercent}% authoritative sources - build credibility through official partnerships`;
-                    } else if (
-                      topCategoryName === "Management Consulting" ||
-                      topCategoryName === "Executive Search"
-                    ) {
-                      return `${topCategoryPercent}% from consulting - establish thought leadership in your industry`;
-                    } else if (
-                      topCategoryName === "Business Media" ||
-                      topCategoryName === "Financial News"
-                    ) {
-                      return `${topCategoryPercent}% media coverage - focus on newsworthy content and PR`;
-                    } else if (
-                      topCategoryName === "Tech Giants" ||
-                      topCategoryName === "Tech Media"
-                    ) {
-                      return `${topCategoryPercent}% tech-focused - create technical content and product insights`;
-                    } else if (
-                      topCategoryName === "Professional Networks" ||
-                      topCategoryName === "Social Platforms"
-                    ) {
-                      return `${topCategoryPercent}% social/professional - leverage LinkedIn and industry networks`;
-                    } else if (topCategoryName === "Blog Platforms") {
-                      return `${topCategoryPercent}% from blogs - opportunity to compete with quality content`;
-                    } else if (topCategoryName === "Industry Organizations") {
-                      return `${topCategoryPercent}% industry bodies - join associations and publish white papers`;
-                    } else {
-                      return `Diverse mix across ${
-                        Object.keys(insightCategories).length
-                      } categories - multi-channel content strategy needed`;
-                    }
-                  })()}
-                </div>
-                </CardBody>
-              </Card>
-            </div>
+                        if (
+                          topCategoryName === "Government" ||
+                          topCategoryName === "Academic"
+                        ) {
+                          return `${topCategoryPercent}% authoritative sources - build credibility through official partnerships`;
+                        } else if (
+                          topCategoryName === "Management Consulting" ||
+                          topCategoryName === "Executive Search"
+                        ) {
+                          return `${topCategoryPercent}% from consulting - establish thought leadership in your industry`;
+                        } else if (
+                          topCategoryName === "Business Media" ||
+                          topCategoryName === "Financial News"
+                        ) {
+                          return `${topCategoryPercent}% media coverage - focus on newsworthy content and PR`;
+                        } else if (
+                          topCategoryName === "Tech Giants" ||
+                          topCategoryName === "Tech Media"
+                        ) {
+                          return `${topCategoryPercent}% tech-focused - create technical content and product insights`;
+                        } else if (
+                          topCategoryName === "Professional Networks" ||
+                          topCategoryName === "Social Platforms"
+                        ) {
+                          return `${topCategoryPercent}% social/professional - leverage LinkedIn and industry networks`;
+                        } else if (topCategoryName === "Blog Platforms") {
+                          return `${topCategoryPercent}% from blogs - opportunity to compete with quality content`;
+                        } else if (
+                          topCategoryName === "Industry Organizations"
+                        ) {
+                          return `${topCategoryPercent}% industry bodies - join associations and publish white papers`;
+                        } else {
+                          return `Diverse mix across ${
+                            Object.keys(insightCategories).length
+                          } categories - multi-channel content strategy needed`;
+                        }
+                      })()}
+                    </div>
+                  </CardBody>
+                </Card>
+              </div>
             </CardBody>
           </Card>
         )}
@@ -812,31 +820,38 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                 <CardTitle>Why Sources Get Ignored (Not Cited)</CardTitle>
               </CardHeader>
               <CardBody>
-              <p className="text-sm text-red-700 mb-2">These were discovered but not referenced in the answer. Heuristics below explain likely reasons.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {uncited.slice(0, 10).map((s: any, i: number) => (
-                  <div
-                    key={s.source_id || i}
-                    className="bg-white rounded-lg p-4 border border-red-200"
-                  >
+                <p className="text-sm text-red-700 mb-2">
+                  These were discovered but not referenced in the answer.
+                  Heuristics below explain likely reasons.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {uncited.slice(0, 10).map((s: any, i: number) => (
                     <div
-                      className="font-medium text-red-900 truncate"
-                      title={s.title || s.url}
+                      key={s.source_id || i}
+                      className="bg-white rounded-lg p-4 border border-red-200"
                     >
-                      {s.title || s.url}
+                      <div
+                        className="font-medium text-red-900 truncate"
+                        title={s.title || s.url}
+                      >
+                        {s.title || s.url}
+                      </div>
+                      <div className="text-xs text-red-600 mt-1">
+                        {s.domain}
+                      </div>
+                      <div className="mt-2 inline-flex items-center gap-2">
+                        <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200">
+                          {reasonFor(s)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-xs text-red-600 mt-1">{s.domain}</div>
-                    <div className="mt-2 inline-flex items-center gap-2">
-                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200">{reasonFor(s)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {uncited.length > 10 && (
-                <div className="text-xs text-red-600 mt-3">
-                  + {uncited.length - 10} more not shown
+                  ))}
                 </div>
-              )}
+                {uncited.length > 10 && (
+                  <div className="text-xs text-red-600 mt-3">
+                    + {uncited.length - 10} more not shown
+                  </div>
+                )}
               </CardBody>
             </Card>
           );
@@ -844,63 +859,47 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
         {/* AI Search Mechanism Analysis */}
         {analysisData.ai_search_intelligence && (
-          <div className="border border-purple-200 bg-purple-50 rounded-lg p-4">
-            <h4 className="font-semibold text-purple-800 mb-3">
-              What Types of Sources Does AI Search Prefer?
-            </h4>
-            <p className="text-sm text-purple-700 mb-3">
-              Analysis of which source types and content characteristics AI
-              search engines are most likely to select and cite.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <h5 className="font-medium text-purple-700 mb-2">
-                  Preferred Source Types
-                </h5>
-                <div className="space-y-1">
-                  {(
-                    analysisData.ai_search_intelligence.selection_patterns
-                      ?.preferred_source_types || []
-                  ).map((type: string, i: number) => (
-                    <div key={i} className="text-purple-600">
-                      • {type}
-                    </div>
-                  ))}
+          <Card>
+            <CardHeader>
+              <CardTitle>What Types of Sources Does AI Search Prefer?</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="text-sm text-purple-700 mb-2">Analysis of which source types and content characteristics AI search engines are most likely to select and cite.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h5 className="font-medium text-purple-700 mb-2">Preferred Source Types</h5>
+                  <div className="space-y-1">
+                    {(analysisData.ai_search_intelligence.selection_patterns?.preferred_source_types || []).map((type: string, i: number) => (
+                      <div key={i} className="text-purple-600">• {type}</div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-purple-700 mb-2">Success Factors</h5>
+                  <div className="space-y-1">
+                    {(analysisData.ai_search_intelligence.selection_patterns?.citation_success_factors || []).map((factor: string, i: number) => (
+                      <div key={i} className="text-purple-600">• {factor}</div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div>
-                <h5 className="font-medium text-purple-700 mb-2">
-                  Success Factors
-                </h5>
-                <div className="space-y-1">
-                  {(
-                    analysisData.ai_search_intelligence.selection_patterns
-                      ?.citation_success_factors || []
-                  ).map((factor: string, i: number) => (
-                    <div key={i} className="text-purple-600">
-                      • {factor}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+            </CardBody>
+          </Card>
         )}
 
         {/* Content Strategy Intelligence */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold text-green-900 mb-1">
-            Content Strategy Intelligence
-          </h3>
-          <p className="text-sm text-green-700 mb-4">
-            Actionable insights for your content roadmap
-          </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Strategy Intelligence</CardTitle>
+          </CardHeader>
+          <CardBody>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg p-4 border border-green-200">
-              <h4 className="text-lg font-semibold text-green-800 mb-3">
-                💡 Content Gap Analysis
-              </h4>
+            <Card>
+              <CardHeader>
+                <CardTitle>💡 Content Gap Analysis</CardTitle>
+              </CardHeader>
+              <CardBody>
               {bundle.sources?.length > 0 ? (
                 <div className="space-y-3 text-sm">
                   <div className="bg-green-100 rounded p-3">
@@ -941,12 +940,14 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                   </p>
                 </div>
               )}
-            </div>
+              </CardBody>
+            </Card>
 
-            <div className="bg-white rounded-lg p-4 border border-green-200">
-              <h4 className="text-lg font-semibold text-green-800 mb-3">
-                📝 Format Recommendations
-              </h4>
+            <Card>
+              <CardHeader>
+                <CardTitle>📝 Format Recommendations</CardTitle>
+              </CardHeader>
+              <CardBody>
               <div className="space-y-2 text-sm">
                 {bundle.sources?.length > 0 ? (
                   <>
@@ -986,9 +987,11 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                   </div>
                 )}
               </div>
-            </div>
+              </CardBody>
+            </Card>
           </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {/* Immediate Action Plan */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
