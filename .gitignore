@@ -35,12 +35,20 @@ frontend/.env
 backend/app.db
 backend/search.db
 
-# Build outputs
+# Build outputs and caches
 frontend/.next/
 frontend/out/
 frontend/build/
+frontend/.next/cache/
 backend/dist/
 backend/build/
+backend/.cache/
+backend/__pycache__/
+
+# Next.js specific
+.next/
+out/
+build/
 
 # Logs
 logs
