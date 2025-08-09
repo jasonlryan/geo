@@ -861,24 +861,43 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
         {analysisData.ai_search_intelligence && (
           <Card>
             <CardHeader>
-              <CardTitle>What Types of Sources Does AI Search Prefer?</CardTitle>
+              <CardTitle>
+                What Types of Sources Does AI Search Prefer?
+              </CardTitle>
             </CardHeader>
             <CardBody>
-              <p className="text-sm text-purple-700 mb-2">Analysis of which source types and content characteristics AI search engines are most likely to select and cite.</p>
+              <p className="text-sm text-purple-700 mb-2">
+                Analysis of which source types and content characteristics AI
+                search engines are most likely to select and cite.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <h5 className="font-medium text-purple-700 mb-2">Preferred Source Types</h5>
+                  <h5 className="font-medium text-purple-700 mb-2">
+                    Preferred Source Types
+                  </h5>
                   <div className="space-y-1">
-                    {(analysisData.ai_search_intelligence.selection_patterns?.preferred_source_types || []).map((type: string, i: number) => (
-                      <div key={i} className="text-purple-600">• {type}</div>
+                    {(
+                      analysisData.ai_search_intelligence.selection_patterns
+                        ?.preferred_source_types || []
+                    ).map((type: string, i: number) => (
+                      <div key={i} className="text-purple-600">
+                        • {type}
+                      </div>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-medium text-purple-700 mb-2">Success Factors</h5>
+                  <h5 className="font-medium text-purple-700 mb-2">
+                    Success Factors
+                  </h5>
                   <div className="space-y-1">
-                    {(analysisData.ai_search_intelligence.selection_patterns?.citation_success_factors || []).map((factor: string, i: number) => (
-                      <div key={i} className="text-purple-600">• {factor}</div>
+                    {(
+                      analysisData.ai_search_intelligence.selection_patterns
+                        ?.citation_success_factors || []
+                    ).map((factor: string, i: number) => (
+                      <div key={i} className="text-purple-600">
+                        • {factor}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -893,120 +912,123 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
             <CardTitle>Content Strategy Intelligence</CardTitle>
           </CardHeader>
           <CardBody>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>💡 Content Gap Analysis</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  {bundle.sources?.length > 0 ? (
+                    <div className="space-y-3 text-sm">
+                      <div className="bg-green-100 rounded p-3">
+                        <p className="font-medium text-green-800">
+                          Competition Level:{" "}
+                          {bundle.sources.length < 3
+                            ? "LOW 🟢"
+                            : bundle.sources.length < 8
+                              ? "MEDIUM 🟡"
+                              : "HIGH 🔴"}
+                        </p>
+                        <p className="text-green-700 mt-1">
+                          {bundle.sources.length < 3
+                            ? "Excellent opportunity to dominate with quality content"
+                            : bundle.sources.length < 8
+                              ? "Moderate competition - focus on unique angles"
+                              : "Saturated space - need exceptional content to compete"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-800">
+                          Publisher Diversity
+                        </p>
+                        <p className="text-green-700">
+                          {
+                            new Set(bundle.sources.map((s: any) => s.domain))
+                              .size
+                          }{" "}
+                          unique domains publishing on this topic
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-100 rounded p-3">
+                      <p className="font-medium text-yellow-800">
+                        🚀 First-Mover Opportunity
+                      </p>
+                      <p className="text-yellow-700">
+                        No strong sources found - potential to be the
+                        authoritative voice on this topic
+                      </p>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>💡 Content Gap Analysis</CardTitle>
-              </CardHeader>
-              <CardBody>
-              {bundle.sources?.length > 0 ? (
-                <div className="space-y-3 text-sm">
-                  <div className="bg-green-100 rounded p-3">
-                    <p className="font-medium text-green-800">
-                      Competition Level:{" "}
-                      {bundle.sources.length < 3
-                        ? "LOW 🟢"
-                        : bundle.sources.length < 8
-                          ? "MEDIUM 🟡"
-                          : "HIGH 🔴"}
-                    </p>
-                    <p className="text-green-700 mt-1">
-                      {bundle.sources.length < 3
-                        ? "Excellent opportunity to dominate with quality content"
-                        : bundle.sources.length < 8
-                          ? "Moderate competition - focus on unique angles"
-                          : "Saturated space - need exceptional content to compete"}
-                    </p>
+              <Card>
+                <CardHeader>
+                  <CardTitle>📝 Format Recommendations</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="space-y-2 text-sm">
+                    {bundle.sources?.length > 0 ? (
+                      <>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-green-800">
+                            Comprehensive Guides
+                          </span>
+                          <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
+                            High Impact
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-green-800">Data Analysis</span>
+                          <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
+                            High Impact
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-green-800">Case Studies</span>
+                          <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                            Medium Impact
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-green-800">
+                            Industry Reports
+                          </span>
+                          <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                            Medium Impact
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-green-700">
+                        <p>• Authoritative overview content</p>
+                        <p>• Data-driven analysis</p>
+                        <p>• Industry best practices</p>
+                        <p>• Expert interviews</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="font-medium text-green-800">
-                      Publisher Diversity
-                    </p>
-                    <p className="text-green-700">
-                      {new Set(bundle.sources.map((s: any) => s.domain)).size}{" "}
-                      unique domains publishing on this topic
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-yellow-100 rounded p-3">
-                  <p className="font-medium text-yellow-800">
-                    🚀 First-Mover Opportunity
-                  </p>
-                  <p className="text-yellow-700">
-                    No strong sources found - potential to be the authoritative
-                    voice on this topic
-                  </p>
-                </div>
-              )}
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>📝 Format Recommendations</CardTitle>
-              </CardHeader>
-              <CardBody>
-              <div className="space-y-2 text-sm">
-                {bundle.sources?.length > 0 ? (
-                  <>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-green-800">
-                        Comprehensive Guides
-                      </span>
-                      <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
-                        High Impact
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-green-800">Data Analysis</span>
-                      <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
-                        High Impact
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-green-800">Case Studies</span>
-                      <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                        Medium Impact
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-green-800">Industry Reports</span>
-                      <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
-                        Medium Impact
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-green-700">
-                    <p>• Authoritative overview content</p>
-                    <p>• Data-driven analysis</p>
-                    <p>• Industry best practices</p>
-                    <p>• Expert interviews</p>
-                  </div>
-                )}
-              </div>
-              </CardBody>
-            </Card>
-          </div>
+                </CardBody>
+              </Card>
+            </div>
           </CardBody>
         </Card>
 
         {/* Immediate Action Plan */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold text-blue-900 mb-1">
-            Immediate Action Plan
-          </h3>
-          <p className="text-sm text-blue-700 mb-4">
-            Your roadmap to AI search visibility
-          </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Immediate Action Plan</CardTitle>
+          </CardHeader>
+          <CardBody>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg p-4 border border-blue-200">
-              <h4 className="text-lg font-semibold text-blue-800 mb-3">
-                🎯 This Quarter's Priorities
-              </h4>
+            <Card>
+              <CardHeader>
+                <CardTitle>🎯 This Quarter's Priorities</CardTitle>
+              </CardHeader>
+              <CardBody>
               <div className="space-y-3">
                 {bundle.sources?.length === 0 ? (
                   <>
@@ -1085,12 +1107,14 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                   </>
                 )}
               </div>
-            </div>
+              </CardBody>
+            </Card>
 
-            <div className="bg-white rounded-lg p-4 border border-blue-200">
-              <h4 className="text-lg font-semibold text-blue-800 mb-3">
-                📊 Success Metrics
-              </h4>
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 Success Metrics</CardTitle>
+              </CardHeader>
+              <CardBody>
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="font-medium text-blue-800">
@@ -1126,16 +1150,19 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                   </p>
                 </div>
               </div>
-            </div>
+              </CardBody>
+            </Card>
           </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {/* Competitive Landscape */}
         {analysisData.ai_search_intelligence?.competitive_landscape && (
-          <div className="border border-orange-200 bg-orange-50 rounded-lg p-4">
-            <h4 className="font-semibold text-orange-800 mb-3">
-              Who's Winning AI Search and Why?
-            </h4>
+          <Card>
+            <CardHeader>
+              <CardTitle>Who's Winning AI Search and Why?</CardTitle>
+            </CardHeader>
+            <CardBody>
             <p className="text-sm text-orange-700 mb-3">
               Analysis of which publishers are most successful at getting cited
               by AI, and what strategies they use.
@@ -1177,14 +1204,16 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                 </div>
               </div>
             </div>
-          </div>
+            </CardBody>
+          </Card>
         )}
 
         {/* AI Selection Performance by Type */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-800 mb-3">
-            Which Source Types Have the Best AI Selection Rates?
-          </h4>
+        <Card>
+          <CardHeader>
+            <CardTitle>Which Source Types Have the Best AI Selection Rates?</CardTitle>
+          </CardHeader>
+          <CardBody>
           <p className="text-sm text-gray-700 mb-3">
             Data showing which types of content sources are most likely to be
             selected and cited by AI search engines.
@@ -1229,12 +1258,14 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
               </div>
             </div>
           </div>
-        </div>
+          </CardBody>
+        </Card>
 
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-800 mb-3">
-            Complete Source Analysis - What AI Actually Selected
-          </h4>
+        <Card>
+          <CardHeader>
+            <CardTitle>Complete Source Analysis - What AI Actually Selected</CardTitle>
+          </CardHeader>
+          <CardBody>
           <p className="text-sm text-gray-700 mb-3">
             Full breakdown of every source that was cited by AI for this query,
             showing the exact characteristics that led to selection.
@@ -1273,13 +1304,15 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
               </tbody>
             </table>
           </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {analysisData.panels?.notable_citations?.length > 0 && (
-          <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
-            <h4 className="font-semibold text-yellow-800 mb-3">
-              Gold Standard Sources - What AI Considers Most Authoritative
-            </h4>
+          <Card>
+            <CardHeader>
+              <CardTitle>Gold Standard Sources - What AI Considers Most Authoritative</CardTitle>
+            </CardHeader>
+            <CardBody>
             <p className="text-sm text-yellow-700 mb-3">
               The highest-quality sources identified by AI search, showing what
               characteristics make content most trustworthy.
@@ -1294,7 +1327,8 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                 )
               )}
             </div>
-          </div>
+            </CardBody>
+          </Card>
         )}
 
         {/* Strategic Intelligence Summary */}
