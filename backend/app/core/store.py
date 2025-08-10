@@ -15,12 +15,25 @@ class Store:
         run_id = run_data.get("run_id") or str(uuid.uuid4())
         run_data["run_id"] = run_id
         
-        # Add source categorization to each source
+        # Add source categorization and credibility scoring to each source
         sources = bundle.get("sources", [])
         for source in sources:
             domain = source.get("domain", "")
             media_type = source.get("media_type", "")
-            source["category"] = categorize_source(domain, media_type)
+            category = categorize_source(domain, media_type)
+            source["category"] = category
+            
+            # Calculate real credibility score using enhanced data
+            from ..utils.source_categorization import calculate_credibility_score
+            credibility = calculate_credibility_score(
+                domain=domain,
+                category=category,
+                published_at=source.get("published_at"),
+                content_length=source.get("content_length", 0),
+                author=source.get("author", ""),
+                title=source.get("title", "")
+            )
+            source["credibility"] = credibility
         
         # Add computed analysis with funnel metrics
         from ..services.analysis import compute_analysis

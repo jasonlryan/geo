@@ -60,12 +60,15 @@ async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = Non
         if not p:
             continue
         docs.append({
-            "title": r.title,
+            "title": p.get("title") or r.title,  # Prefer extracted title over provider title
             "url": r.url,
             "snippet": r.snippet,
-            "published_at": r.published_at,
+            "published_at": p.get("published_at") or r.published_at,  # Prefer extracted date
             "provider": r.provider,
             "raw_text": p["text"],
+            "author": p.get("author", ""),
+            "extraction_method": p.get("extraction_method", "unknown"),
+            "content_length": p.get("content_length", 0),
         })
     return docs
 

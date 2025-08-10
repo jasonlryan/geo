@@ -146,3 +146,133 @@ def classify_recency(published_at: str | None) -> str:
             return "stale"
     except (ValueError, TypeError):
         return "unknown"
+
+
+def calculate_credibility_score(domain: str, category: str, published_at: str | None = None, 
+                               content_length: int = 0, author: str = "", title: str = "") -> dict:
+    """
+    Calculate a comprehensive credibility score based on multiple factors.
+    Returns a dict with score (0-1) and explanatory factors.
+    """
+    factors = []
+    score = 0.0
+    
+    # Base domain authority score by category (most important factor)
+    domain_scores = {
+        "gov": 0.95,      # Government sources - highest authority
+        "edu": 0.90,      # Academic institutions - very high authority
+        "research": 0.85, # Research institutes - high authority
+        "news": 0.75,     # Established news orgs - good authority
+        "consultancy": 0.70,  # Management consulting - professional authority
+        "financial": 0.65,    # Financial institutions - moderate authority
+        "legal": 0.80,    # Legal sources - high for legal topics
+        "nonprofit": 0.60,    # Nonprofits - moderate authority
+        "agency": 0.55,   # Recruitment agencies - lower authority
+        "corporate": 0.50,    # Corporate websites - baseline authority
+        "social": 0.30,   # Social media - low authority
+        "blog": 0.35,     # Personal/corporate blogs - low authority
+    }
+    
+    base_score = domain_scores.get(category, 0.40)
+    score = base_score
+    factors.append(f"Domain authority ({category}): {base_score:.2f}")
+    
+    # Domain-specific adjustments for known high-authority sources
+    high_authority_domains = {
+        # Government
+        "sec.gov": 0.98, "fed.gov": 0.98, "treasury.gov": 0.98,
+        # News/Media 
+        "reuters.com": 0.85, "bloomberg.com": 0.85, "wsj.com": 0.82, 
+        "ft.com": 0.82, "economist.com": 0.80, "nytimes.com": 0.78,
+        # Research/Think Tanks
+        "brookings.edu": 0.90, "rand.org": 0.88, "cfr.org": 0.87,
+        "pewresearch.org": 0.85, "urban.org": 0.83,
+        # Consulting
+        "mckinsey.com": 0.78, "bcg.com": 0.76, "bain.com": 0.75,
+        "deloitte.com": 0.74, "pwc.com": 0.73, "kpmg.com": 0.72,
+        # Academic
+        "harvard.edu": 0.92, "stanford.edu": 0.92, "mit.edu": 0.92,
+    }
+    
+    if domain.lower() in high_authority_domains:
+        adjustment = high_authority_domains[domain.lower()] - base_score
+        score += adjustment
+        factors.append(f"Premium domain bonus: +{adjustment:.2f}")
+    
+    # Recency factor (more important for time-sensitive topics)
+    if published_at:
+        recency_class = classify_recency(published_at)
+        recency_adjustments = {
+            "recent": 0.05,   # Recent content gets small boost
+            "medium": 0.0,    # No adjustment
+            "stale": -0.10,   # Old content penalized
+            "unknown": -0.02  # Unknown dates slightly penalized
+        }
+        
+        recency_adj = recency_adjustments.get(recency_class, 0)
+        score += recency_adj
+        factors.append(f"Content recency ({recency_class}): {recency_adj:+.2f}")
+    
+    # Content quality indicators
+    if content_length > 0:
+        # Length factor - substantial articles are more credible
+        if content_length >= 2000:
+            length_bonus = 0.05
+            factors.append(f"Substantial content (+2000 chars): +{length_bonus:.2f}")
+        elif content_length >= 1000:
+            length_bonus = 0.02
+            factors.append(f"Adequate content (+1000 chars): +{length_bonus:.2f}")
+        elif content_length < 300:
+            length_bonus = -0.05
+            factors.append(f"Thin content (<300 chars): {length_bonus:.2f}")
+        else:
+            length_bonus = 0
+        
+        score += length_bonus
+    
+    # Author credibility (if available)
+    if author and author.strip():
+        # Simple heuristic: named authors more credible than anonymous
+        author_bonus = 0.03
+        score += author_bonus
+        factors.append(f"Named author: +{author_bonus:.2f}")
+    
+    # Title quality indicators
+    if title:
+        title_lower = title.lower()
+        # Penalize clickbait patterns
+        clickbait_patterns = ["you won't believe", "shocking", "this one trick", 
+                            "doctors hate", "must see", "amazing", "incredible"]
+        if any(pattern in title_lower for pattern in clickbait_patterns):
+            clickbait_penalty = -0.08
+            score += clickbait_penalty
+            factors.append(f"Clickbait title: {clickbait_penalty:.2f}")
+        
+        # Boost academic/professional title patterns  
+        if any(pattern in title_lower for pattern in ["study", "analysis", "report", "research", "findings"]):
+            academic_bonus = 0.03
+            score += academic_bonus
+            factors.append(f"Academic title: +{academic_bonus:.2f}")
+    
+    # Ensure score stays in bounds [0, 1]
+    score = max(0.0, min(1.0, score))
+    
+    # Calculate letter grade
+    if score >= 0.8:
+        grade = "A"
+    elif score >= 0.65:
+        grade = "B" 
+    elif score >= 0.5:
+        grade = "C"
+    elif score >= 0.35:
+        grade = "D"
+    else:
+        grade = "F"
+    
+    return {
+        "score": round(score, 3),
+        "band": grade,
+        "factors": factors,
+        "category": category,
+        "methodology": "domain_authority + recency + content_quality + author_signals"
+    }
