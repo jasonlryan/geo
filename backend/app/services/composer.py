@@ -27,6 +27,9 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
             "title": s.get("title"),
             "domain": s.get("domain"),
             "url": s.get("url"),
+            "category": s.get("category", "unknown"),
+            "credibility_score": s.get("credibility", {}).get("score", 0.5),
+            "credibility_band": s.get("credibility", {}).get("band", "C"),
             "snippet": (s.get("raw_text") or s.get("title") or "")[:800],
         }
         for s in sources
@@ -35,7 +38,12 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
     system = (
         "You are a precise research assistant. Answer the user's query using the provided sources. "
         "Every sentence in your answer must include one or more citations referencing source_id values. "
-        "Prefer citing multiple independent sources (different domains). Aim for ≥2 citations per sentence when available, "
+        "\n**AUTHORITY PRIORITIZATION:**\n"
+        "- STRONGLY prefer citing gov/edu/research sources (credibility_score ≥0.8) over corporate sources\n"
+        "- Require at least one high-authority citation (gov/edu/research) per sentence when available\n"
+        "- Avoid citing corporate blogs or marketing content unless they contain unique primary data\n"
+        "- When multiple sources support a claim, prioritize: gov > edu > research > news > consultancy > corporate\n"
+        "\nPrefer citing multiple independent sources (different domains). Aim for ≥2 citations per sentence when available, "
         "and at least 4 unique sources across the whole answer if possible. "
         "If few sources are available, cite all relevant ones. "
         "Return strict JSON with keys: answer_text, sentences[]. Each sentences[] item has text and source_ids[]."

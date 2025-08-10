@@ -39,10 +39,14 @@ def categorize_source(domain: str, media_type: str = "") -> str:
         any(pattern in domain for pattern in edu_patterns)):
         return "edu"
     
-    # Research institutes and think tanks
+    # Research institutes and think tanks + Academic publishers
     research_patterns = ["research", "institute", "arxiv", "scholar", "researchgate", "pubmed", "ncbi", 
                         "brookings", "rand.org", "heritage", "aei.org", "cfr.org", "carnegie", 
-                        "urban.org", "pewresearch", "gallup", "mckinsey institute"]
+                        "urban.org", "pewresearch", "gallup", "mckinsey institute",
+                        # Academic publishers and journals
+                        "springer", "nature.com", "ieee.org", "acm.org", "sciencedirect", 
+                        "sagepub", "tandfonline", "jstor", "wiley", "elsevier", "pnas.org",
+                        "science.org", "cell.com", "nejm.org", "bmj.com", "thelancet.com"]
     if (any(pattern in domain for pattern in research_patterns) or
         (media_type and ("paper" in media_type or "journal" in media_type or "research" in media_type))):
         return "research"
@@ -187,10 +191,16 @@ def calculate_credibility_score(domain: str, category: str, published_at: str | 
         # Research/Think Tanks
         "brookings.edu": 0.90, "rand.org": 0.88, "cfr.org": 0.87,
         "pewresearch.org": 0.85, "urban.org": 0.83,
+        # Academic Publishers (high authority for research)
+        "nature.com": 0.95, "science.org": 0.95, "cell.com": 0.94,
+        "pnas.org": 0.94, "springer.com": 0.88, "ieee.org": 0.87,
+        "acm.org": 0.87, "sciencedirect.com": 0.86, "wiley.com": 0.85,
+        "sagepub.com": 0.84, "tandfonline.com": 0.84, "jstor.org": 0.83,
+        "nejm.org": 0.93, "bmj.com": 0.91, "thelancet.com": 0.92,
         # Consulting
         "mckinsey.com": 0.78, "bcg.com": 0.76, "bain.com": 0.75,
         "deloitte.com": 0.74, "pwc.com": 0.73, "kpmg.com": 0.72,
-        # Academic
+        # Academic Institutions
         "harvard.edu": 0.92, "stanford.edu": 0.92, "mit.edu": 0.92,
     }
     
