@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createRun, getRunBundle, generateRandomQuery, apiBaseUrl } from "@/lib/api";
+import {
+  createRun,
+  getRunBundle,
+  generateRandomQuery,
+  apiBaseUrl,
+} from "@/lib/api";
 import ExportsBar from "@/components/ExportsBar";
 import ViewReport from "@/components/ViewReport";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -34,7 +39,7 @@ export default function SearchPage() {
     const urlQuery = searchParams.get("q");
     const urlSubject = searchParams.get("subject");
     const tab = (searchParams.get("tab") || "").toLowerCase();
-    
+
     if (urlQuery && urlQuery !== query) {
       setQuery(urlQuery);
     }
@@ -273,7 +278,7 @@ export default function SearchPage() {
             />
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <Button
             type="submit"
@@ -437,7 +442,18 @@ export default function SearchPage() {
                         </div>
                         <div className="text-slate-600">
                           {s.domain} · {categorize(s)} · cred{" "}
-                          {s.credibility.score} ·{" "}
+                          {s.credibility.score}
+                          {s.discovered_by && s.discovered_by.length > 1 && (
+                            <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                              Found by: {s.discovered_by.join(" + ")} 
+                              {s.consensus_boost && ` (+${Math.round(s.consensus_boost * 100)}%)`}
+                            </span>
+                          )}
+                          {s.discovered_by && s.discovered_by.length === 1 && (
+                            <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                              {s.discovered_by[0]} only
+                            </span>
+                          )} ·{" "}
                           <a
                             className="underline text-blue-600 hover:text-blue-800"
                             href={s.url}

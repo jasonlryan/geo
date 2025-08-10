@@ -976,6 +976,291 @@ def calculate_market_concentration(domain_insights):
     }
 
 
+@router.get("/runs/{run_id}/consensus")
+def get_consensus_analysis(run_id: str):
+    """Analyze multi-provider consensus vs citation correlation for research insights."""
+    run = STORE.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    sources = run.get("sources", [])
+    evidence = run.get("evidence", [])
+    
+    # Get cited source IDs
+    cited_source_ids = set(e.get("source_id") for e in evidence if e.get("source_id"))
+    
+    # Analyze consensus patterns
+    consensus_analysis = {
+        "total_sources": len(sources),
+        "cited_sources": len(cited_source_ids),
+        "overall_citation_rate": round(len(cited_source_ids) / max(len(sources), 1) * 100, 1),
+        "consensus_breakdown": {
+            "single_provider": {"count": 0, "cited": 0, "citation_rate": 0.0},
+            "dual_provider": {"count": 0, "cited": 0, "citation_rate": 0.0},  
+            "triple_plus_provider": {"count": 0, "cited": 0, "citation_rate": 0.0}
+        },
+        "provider_performance": {},
+        "consensus_correlation": 0.0,
+        "authority_boost_effectiveness": {},
+        "detailed_sources": []
+    }
+    
+    # Categorize sources by consensus level
+    for source in sources:
+        source_id = source.get("source_id")
+        discovered_by = source.get("discovered_by", [])
+        consensus_boost = source.get("consensus_boost", 0.0)
+        is_cited = source_id in cited_source_ids
+        
+        # Consensus categorization
+        provider_count = len(discovered_by)
+        if provider_count <= 1:
+            category = "single_provider"
+        elif provider_count == 2:
+            category = "dual_provider"
+        else:
+            category = "triple_plus_provider"
+            
+        consensus_analysis["consensus_breakdown"][category]["count"] += 1
+        if is_cited:
+            consensus_analysis["consensus_breakdown"][category]["cited"] += 1
+            
+        # Provider performance tracking
+        for provider in discovered_by:
+            if provider not in consensus_analysis["provider_performance"]:
+                consensus_analysis["provider_performance"][provider] = {
+                    "sources_found": 0, "sources_cited": 0, "citation_rate": 0.0
+                }
+            consensus_analysis["provider_performance"][provider]["sources_found"] += 1
+            if is_cited:
+                consensus_analysis["provider_performance"][provider]["sources_cited"] += 1
+        
+        # Authority boost effectiveness
+        domain = source.get("domain", "").lower()
+        authority_type = "unknown"
+        if ".gov" in domain:
+            authority_type = "government"
+        elif ".edu" in domain:
+            authority_type = "academic"
+        elif ".org" in domain:
+            authority_type = "organization"
+        else:
+            authority_type = "commercial"
+            
+        if authority_type not in consensus_analysis["authority_boost_effectiveness"]:
+            consensus_analysis["authority_boost_effectiveness"][authority_type] = {
+                "total": 0, "cited": 0, "avg_consensus_boost": 0.0
+            }
+            
+        auth_stats = consensus_analysis["authority_boost_effectiveness"][authority_type]
+        auth_stats["total"] += 1
+        auth_stats["avg_consensus_boost"] += consensus_boost
+        if is_cited:
+            auth_stats["cited"] += 1
+            
+        # Detailed source info for research
+        consensus_analysis["detailed_sources"].append({
+            "source_id": source_id,
+            "title": source.get("title", "")[:100],
+            "domain": domain,
+            "discovered_by": discovered_by,
+            "provider_count": provider_count,
+            "consensus_boost": consensus_boost,
+            "authority_type": authority_type,
+            "is_cited": is_cited,
+            "credibility_score": source.get("credibility", {}).get("score", 0.0)
+        })
+    
+    # Calculate citation rates for each consensus category
+    for category, stats in consensus_analysis["consensus_breakdown"].items():
+        if stats["count"] > 0:
+            stats["citation_rate"] = round(stats["cited"] / stats["count"] * 100, 1)
+    
+    # Calculate provider citation rates
+    for provider, stats in consensus_analysis["provider_performance"].items():
+        if stats["sources_found"] > 0:
+            stats["citation_rate"] = round(stats["sources_cited"] / stats["sources_found"] * 100, 1)
+    
+    # Calculate authority boost effectiveness
+    for auth_type, stats in consensus_analysis["authority_boost_effectiveness"].items():
+        if stats["total"] > 0:
+            stats["citation_rate"] = round(stats["cited"] / stats["total"] * 100, 1)
+            stats["avg_consensus_boost"] = round(stats["avg_consensus_boost"] / stats["total"], 3)
+    
+    # Calculate consensus correlation coefficient
+    if len(sources) > 1:
+        provider_counts = [len(s.get("discovered_by", [])) for s in sources]
+        citation_flags = [1 if s.get("source_id") in cited_source_ids else 0 for s in sources]
+        consensus_analysis["consensus_correlation"] = calculate_correlation(provider_counts, citation_flags)
+    
+    return consensus_analysis
+
+
+def calculate_correlation(x_values, y_values):
+    """Calculate Pearson correlation coefficient between two lists."""
+    if len(x_values) != len(y_values) or len(x_values) < 2:
+        return 0.0
+        
+    n = len(x_values)
+    sum_x = sum(x_values)
+    sum_y = sum(y_values)
+    sum_xy = sum(x * y for x, y in zip(x_values, y_values))
+    sum_x2 = sum(x * x for x in x_values)
+    sum_y2 = sum(y * y for y in y_values)
+    
+    numerator = n * sum_xy - sum_x * sum_y
+    denominator_x = n * sum_x2 - sum_x * sum_x
+    denominator_y = n * sum_y2 - sum_y * sum_y
+    
+    if denominator_x <= 0 or denominator_y <= 0:
+        return 0.0
+        
+    denominator = (denominator_x * denominator_y) ** 0.5
+    
+    if denominator == 0:
+        return 0.0
+        
+    return round(numerator / denominator, 3)
+
+
+@router.get("/insights/consensus_meta")
+def get_consensus_meta_analysis(subject: str = None, limit: int = 50):
+    """Meta-analysis of consensus patterns across multiple runs for research insights."""
+    recent = CACHE.zrevrange_withscores(CACHE.ai_key("recent"), 0, max(0, limit - 1))
+    run_ids = [m for m, _ in recent]
+    
+    # Aggregate consensus data across runs
+    meta_analysis = {
+        "runs_analyzed": 0,
+        "consensus_trends": {
+            "single_provider": {"total_sources": 0, "total_cited": 0, "citation_rate": 0.0},
+            "dual_provider": {"total_sources": 0, "total_cited": 0, "citation_rate": 0.0},
+            "triple_plus_provider": {"total_sources": 0, "total_cited": 0, "citation_rate": 0.0}
+        },
+        "provider_effectiveness": {},
+        "authority_consensus_patterns": {},
+        "correlation_scores": [],
+        "consensus_boost_effectiveness": 0.0
+    }
+    
+    for run_id in run_ids:
+        bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+        if not bundle:
+            continue
+            
+        # Filter by subject if provided
+        if subject:
+            bundle_subject = bundle.get("run", {}).get("subject")
+            if bundle_subject != subject:
+                continue
+                
+        meta_analysis["runs_analyzed"] += 1
+        sources = bundle.get("sources", [])
+        evidence = bundle.get("evidence", [])
+        cited_ids = set(e.get("source_id") for e in evidence if e.get("source_id"))
+        
+        # Aggregate consensus patterns
+        for source in sources:
+            discovered_by = source.get("discovered_by", [])
+            consensus_boost = source.get("consensus_boost", 0.0)
+            is_cited = source.get("source_id") in cited_ids
+            provider_count = len(discovered_by)
+            
+            # Categorize by consensus level
+            if provider_count <= 1:
+                category = "single_provider"
+            elif provider_count == 2:
+                category = "dual_provider"
+            else:
+                category = "triple_plus_provider"
+                
+            meta_analysis["consensus_trends"][category]["total_sources"] += 1
+            if is_cited:
+                meta_analysis["consensus_trends"][category]["total_cited"] += 1
+            
+            # Provider effectiveness across runs
+            for provider in discovered_by:
+                if provider not in meta_analysis["provider_effectiveness"]:
+                    meta_analysis["provider_effectiveness"][provider] = {
+                        "total_sources": 0, "cited_sources": 0, "runs_present": 0
+                    }
+                meta_analysis["provider_effectiveness"][provider]["total_sources"] += 1
+                if is_cited:
+                    meta_analysis["provider_effectiveness"][provider]["cited_sources"] += 1
+    
+    # Calculate final rates and insights
+    for category, stats in meta_analysis["consensus_trends"].items():
+        if stats["total_sources"] > 0:
+            stats["citation_rate"] = round(stats["total_cited"] / stats["total_sources"] * 100, 1)
+    
+    for provider, stats in meta_analysis["provider_effectiveness"].items():
+        if stats["total_sources"] > 0:
+            stats["citation_rate"] = round(stats["cited_sources"] / stats["total_sources"] * 100, 1)
+    
+    # Generate research insights
+    insights = generate_consensus_insights(meta_analysis)
+    
+    return {
+        **meta_analysis,
+        "research_insights": insights,
+        "subject_filter": subject
+    }
+
+
+def generate_consensus_insights(meta_analysis):
+    """Generate research insights from consensus meta-analysis."""
+    insights = {
+        "consensus_hypothesis_validation": "",
+        "provider_ranking": [],
+        "authority_effectiveness": "",
+        "research_recommendations": []
+    }
+    
+    trends = meta_analysis["consensus_trends"]
+    
+    # Validate consensus hypothesis
+    single_rate = trends["single_provider"]["citation_rate"]
+    dual_rate = trends["dual_provider"]["citation_rate"] 
+    triple_rate = trends["triple_plus_provider"]["citation_rate"]
+    
+    if triple_rate > dual_rate > single_rate:
+        insights["consensus_hypothesis_validation"] = "CONFIRMED: Multi-provider consensus strongly correlates with higher citation rates"
+    elif dual_rate > single_rate:
+        insights["consensus_hypothesis_validation"] = "PARTIALLY CONFIRMED: Dual-provider consensus shows improvement over single-provider"
+    else:
+        insights["consensus_hypothesis_validation"] = "INCONCLUSIVE: Consensus benefit not clearly demonstrated in current data"
+    
+    # Rank providers by effectiveness
+    provider_ranking = []
+    for provider, stats in meta_analysis["provider_effectiveness"].items():
+        if stats["total_sources"] >= 10:  # Minimum threshold for statistical relevance
+            provider_ranking.append({
+                "provider": provider,
+                "citation_rate": stats["citation_rate"],
+                "sample_size": stats["total_sources"]
+            })
+    
+    insights["provider_ranking"] = sorted(provider_ranking, key=lambda x: x["citation_rate"], reverse=True)
+    
+    # Research recommendations
+    if triple_rate > single_rate + 10:  # 10+ percentage point improvement
+        insights["research_recommendations"].append({
+            "finding": "Strong consensus effect detected",
+            "recommendation": "Prioritize sources found by 3+ providers for citation analysis",
+            "impact": f"Potential {triple_rate - single_rate:.1f}% citation rate improvement"
+        })
+    
+    if len(insights["provider_ranking"]) > 1:
+        top_provider = insights["provider_ranking"][0]
+        insights["research_recommendations"].append({
+            "finding": f"{top_provider['provider']} shows highest citation effectiveness",
+            "recommendation": "Weight this provider's results more heavily in scoring algorithms",
+            "impact": f"Citation rate: {top_provider['citation_rate']}%"
+        })
+    
+    return insights
+
+
 @router.post("/insights/migrate_legacy")
 def migrate_legacy(dry_run: bool = True, limit: int = 1000):
     """Copy legacy, un-versioned ai_search:* keys into versioned namespace.

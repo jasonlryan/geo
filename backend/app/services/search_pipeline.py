@@ -8,6 +8,10 @@ from .providers.base import ProviderResult
 from .fetch_parse import fetch_and_parse
 from .providers.tavily_provider import TavilySearchProvider
 from .providers.openai_provider import OpenAISearchProvider
+from .providers.brave_provider import BraveSearchProvider
+from .providers.bing_provider import BingSearchProvider
+from .providers.perplexity_provider import PerplexityProvider
+from .providers.consensus_merger import ConsensusResultMerger
 
 
 async def expand_queries(base_query: str) -> List[str]:
@@ -96,52 +100,98 @@ async def generate_llm_query_variants(base_query: str) -> List[str]:
 
 
 async def run_search(query: str, limit_per_query: int | None = None) -> List[ProviderResult]:
+    """
+    Multi-provider search with consensus tracking and weighted deduplication.
+    Returns results with cross-provider consensus signals preserved.
+    """
     if limit_per_query is None:
-        limit_per_query = int(os.getenv("SEARCH_LIMIT_PER_QUERY", "20"))
+        limit_per_query = int(os.getenv("SEARCH_LIMIT_PER_QUERY", "15"))  # Reduced per provider due to more providers
+    
     providers = []
     
-    # Multi-provider search: Tavily + OpenAI for diversified recall
-    try:
-        providers.append(TavilySearchProvider())
-    except Exception as e:
-        print(f"[ERROR] Failed to initialize Tavily provider: {e}")
+    # Initialize all available providers with graceful error handling
+    provider_configs = [
+        (TavilySearchProvider, "Tavily"),
+        (OpenAISearchProvider, "OpenAI"), 
+        (BraveSearchProvider, "Brave"),
+        (BingSearchProvider, "Bing"),
+        (PerplexityProvider, "Perplexity")
+    ]
     
-    try:
-        providers.append(OpenAISearchProvider())
-    except Exception as e:
-        print(f"[ERROR] Failed to initialize OpenAI provider: {e}")
+    for provider_class, provider_name in provider_configs:
+        try:
+            providers.append(provider_class())
+            print(f"[INFO] Initialized {provider_name} search provider")
+        except Exception as e:
+            print(f"[WARNING] Failed to initialize {provider_name} provider: {e}")
+            # Continue with other providers - don't fail entire search
     
     # Return empty if no providers available
     if not providers:
         print("[ERROR] No search providers available")
         return []
+    
+    print(f"[INFO] Running multi-provider search with {len(providers)} providers")
     variants = await expand_queries(query)
 
     async def search_one(p, q: str) -> List[ProviderResult]:
+        """Search one provider with one query variant."""
         try:
-            return await p.search(q, limit=limit_per_query)
-        except Exception:
+            results = await p.search(q, limit=limit_per_query)
+            print(f"[INFO] {p.name} returned {len(results)} results for: {q[:50]}...")
+            return results
+        except Exception as e:
+            print(f"[ERROR] Search failed for {p.name}: {e}")
             return []
 
+    # Execute all provider x query combinations in parallel
     tasks = []
     for p in providers:
         for q in variants:
             tasks.append(search_one(p, q))
-    results_lists = await asyncio.gather(*tasks)
-    results: List[ProviderResult] = [r for lst in results_lists for r in lst]
-    # Enhanced URL canonicalization and deduplication
-    from ..services.content_deduplication import canonicalize_url
     
-    seen = set()
-    deduped = []
-    for r in results:
-        # Use canonical URL for deduplication
-        canonical_url = canonicalize_url(r.url)
-        if canonical_url in seen:
-            continue
-        seen.add(canonical_url)
-        deduped.append(r)
-    return deduped
+    results_lists = await asyncio.gather(*tasks)
+    all_results: List[ProviderResult] = [r for lst in results_lists for r in lst]
+    
+    print(f"[INFO] Collected {len(all_results)} total results before consensus merging")
+    
+    # Use ConsensusResultMerger instead of simple deduplication
+    merger = ConsensusResultMerger()
+    merged_results = merger.merge_provider_results(all_results)
+    
+    print(f"[INFO] After consensus merging: {len(merged_results)} unique results")
+    
+    # Convert ConsensusMergedResult back to ProviderResult for backward compatibility
+    # while preserving consensus metadata
+    final_results = []
+    for merged in merged_results:
+        # Create ProviderResult with consensus data embedded
+        result = ProviderResult(
+            title=merged.title,
+            url=merged.url,
+            snippet=merged.snippet,
+            published_at=merged.published_at,
+            provider=merged.primary_provider,
+            score=max(merged.provider_scores.values()) * (1 + merged.consensus_boost)  # Apply consensus boost
+        )
+        
+        # Preserve consensus metadata in the result object
+        result.discovered_by = merged.discovered_by
+        result.provider_scores = merged.provider_scores
+        result.consensus_boost = merged.consensus_boost
+        
+        final_results.append(result)
+    
+    # Log consensus statistics for research insights
+    consensus_stats = {
+        "single_provider": len([r for r in final_results if len(r.discovered_by) == 1]),
+        "dual_provider": len([r for r in final_results if len(r.discovered_by) == 2]), 
+        "triple_plus_provider": len([r for r in final_results if len(r.discovered_by) >= 3]),
+        "max_consensus": max(len(r.discovered_by) for r in final_results) if final_results else 0
+    }
+    print(f"[RESEARCH] Consensus stats: {consensus_stats}")
+    
+    return final_results
 
 
 async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = None) -> List[dict]:
