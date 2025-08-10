@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createRun, getRunBundle, apiBaseUrl } from "@/lib/api";
+import { createRun, getRunBundle, generateRandomQuery, apiBaseUrl } from "@/lib/api";
 import ExportsBar from "@/components/ExportsBar";
 import ViewReport from "@/components/ViewReport";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -82,16 +82,11 @@ export default function SearchPage() {
     await runQuery(query);
   };
 
-  const generateRandomQuery = async () => {
+  const handleGenerateRandomQuery = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/api/search/random-query?subject=${encodeURIComponent(subject)}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      const q = data.query;
-      setQuery(q);
-      return q;
+      const generatedQuery = await generateRandomQuery(subject);
+      setQuery(generatedQuery);
+      return generatedQuery;
     } catch (error) {
       console.error("Failed to generate random query:", error);
       // Don't set query - let user know it failed
@@ -292,7 +287,7 @@ export default function SearchPage() {
             variant="outline"
             disabled={loading}
             onClick={async () => {
-              await generateRandomQuery();
+              await handleGenerateRandomQuery();
             }}
           >
             Random Query

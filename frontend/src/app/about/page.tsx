@@ -45,7 +45,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Query Processing</h4>
                   <p className="text-slate-600">
-                    AI interprets your question and determines what information to search for
+                    The system interprets your question and determines what information to search for
                   </p>
                 </div>
               </div>
@@ -56,7 +56,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Web Search</h4>
                   <p className="text-slate-600">
-                    AI searches the web for relevant sources using proprietary search methods
+                    Advanced algorithms search the web for relevant sources using proprietary methods
                   </p>
                 </div>
               </div>
@@ -67,7 +67,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Content Analysis</h4>
                   <p className="text-slate-600">
-                    AI reads and evaluates each found source for relevance and quality
+                    Sophisticated algorithms read and evaluate each found source for relevance and quality
                   </p>
                 </div>
               </div>
@@ -78,7 +78,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Authority Assessment</h4>
                   <p className="text-slate-600">
-                    AI applies unknown credibility filters to prioritize trustworthy sources
+                    The system applies proprietary credibility filters to prioritize trustworthy sources
                   </p>
                 </div>
               </div>
@@ -89,7 +89,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Citation Selection</h4>
                   <p className="text-slate-600">
-                    AI chooses which sources to actually reference in the final answer
+                    Advanced ranking algorithms choose which sources to actually reference in the final answer
                   </p>
                 </div>
               </div>
@@ -100,7 +100,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Answer Generation</h4>
                   <p className="text-slate-600">
-                    AI composes the final response with citations to selected sources
+                    The system composes the final response with citations to selected sources
                   </p>
                 </div>
               </div>

@@ -45,3 +45,12 @@ export async function getRunBundle(runId: string): Promise<{
   } as any;
 }
 
+export async function generateRandomQuery(subject: string): Promise<string> {
+  const response = await fetch(`${apiBaseUrl}/api/search/random-query?subject=${encodeURIComponent(subject)}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.query;
+}
+

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { generateRandomQuery } from "@/lib/api";
 
 export default function HomePage() {
   const [query, setQuery] = useState("");
@@ -12,6 +13,25 @@ export default function HomePage() {
   const handleSearch = () => {
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query.trim())}&subject=${encodeURIComponent(subject)}`);
+    }
+  };
+
+  const handleGenerateQuery = async () => {
+    try {
+      const generatedQuery = await generateRandomQuery(subject);
+      setQuery(generatedQuery);
+    } catch (error) {
+      console.error("Failed to generate random query:", error);
+      // Fallback to static examples
+      const examples = [
+        "AI leadership strategies",
+        "Remote work productivity trends", 
+        "Cybersecurity best practices",
+        "Sustainable business models",
+        "Digital transformation frameworks"
+      ];
+      const randomExample = examples[Math.floor(Math.random() * examples.length)];
+      setQuery(randomExample);
     }
   };
 
@@ -55,20 +75,6 @@ export default function HomePage() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Research Query
-                </label>
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="e.g., AI leadership strategies, cybersecurity frameworks..."
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Subject Area
                 </label>
                 <input
@@ -78,6 +84,30 @@ export default function HomePage() {
                   placeholder="Executive Search, Technology, Healthcare..."
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Research Query
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="e.g., AI leadership strategies, cybersecurity frameworks..."
+                    className="flex-1 px-4 py-3 border border-slate-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="px-4 py-3"
+                    onClick={handleGenerateQuery}
+                  >
+                    Generate
+                  </Button>
+                </div>
               </div>
 
               <Button

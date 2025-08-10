@@ -14,12 +14,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <Link
-              href="/search"
+              href="/"
               className="font-semibold text-lg text-slate-900 hover:text-blue-600 transition-colors"
             >
-              AI Search with Citations
+              AI Search Citation Research
             </Link>
             <nav className="flex items-center gap-6 text-sm">
+              <Link
+                href="/"
+                className="text-slate-600 hover:text-slate-900 hover:underline transition-colors font-medium"
+              >
+                Home
+              </Link>
               <Link
                 href="/search"
                 className="text-slate-600 hover:text-slate-900 hover:underline transition-colors font-medium"
