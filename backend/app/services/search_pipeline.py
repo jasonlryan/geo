@@ -12,23 +12,87 @@ from .providers.openai_provider import OpenAISearchProvider
 
 async def expand_queries(base_query: str) -> List[str]:
     """
-    Generate query variants that favor authoritative sources over corporate blogs.
-    Based on review2 feedback: avoid corporate "trends 2025" bias.
+    Generate query variants using LLM for diverse search terms + authority bias.
+    Combines AI-generated contextual queries with authority-focused variants.
     """
     variants = [base_query]  # Always include the original query
     
-    # Authority-favoring variants (instead of just adding "2025" and "latest")
+    # Generate LLM-based query expansions
+    try:
+        llm_variants = await generate_llm_query_variants(base_query)
+        variants.extend(llm_variants[:2])  # Add top 2 LLM variants
+    except Exception as e:
+        print(f"[ERROR] LLM query expansion failed: {e}")
+    
+    # Add authority-favoring variants as fallback/complement
     authority_variants = [
         f'"{base_query}" (site:.gov OR site:.edu OR site:.org)',  # Favor authority domains
         f'{base_query} research paper OR policy OR white paper',   # Favor research content
-        f'{base_query} study OR findings OR analysis',             # Academic language
-        f'{base_query} report -blog -"best practices" -trends',    # Exclude blog patterns
     ]
     
-    # Add selected authority variants (limit to avoid too many API calls)
-    variants.extend(authority_variants[:2])  # Use first 2 authority variants
+    # Add selected authority variants if we have room
+    current_count = len(variants)
+    if current_count < 4:
+        variants.extend(authority_variants[:4-current_count])
     
-    return variants
+    return variants[:4]  # Limit to 4 total variants to avoid too many API calls
+
+
+async def generate_llm_query_variants(base_query: str) -> List[str]:
+    """
+    Use OpenAI to generate diverse, contextually relevant query variants.
+    """
+    import asyncio
+    import json
+    from ..services.search_openai import openai_client
+    
+    def _call_llm() -> List[str]:
+        try:
+            client = openai_client()
+            model = os.getenv("OPENAI_MODEL_SEARCH", "gpt-4o-mini")
+            
+            system = (
+                "You are a search query expansion expert. Given a base query, generate 3 diverse, "
+                "contextually relevant alternative search queries that would find different but related information. "
+                "Focus on: 1) Different terminologies, 2) Related concepts, 3) Specific aspects. "
+                "Avoid corporate marketing terms like 'trends', 'best practices', 'top 10'. "
+                "Prefer academic, research-oriented, and authoritative language. "
+                "Return as JSON: {\"variants\": [\"query1\", \"query2\", \"query3\"]}"
+            )
+            
+            user_prompt = f"Base query: \"{base_query}\"\n\nGenerate 3 diverse search query variants."
+            
+            resp = client.chat.completions.create(
+                model=model,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,  # Higher creativity for diverse variants
+                max_tokens=200
+            )
+            
+            content = resp.choices[0].message.content
+            data = json.loads(content)
+            variants = data.get("variants", [])
+            
+            # Filter and clean variants
+            cleaned_variants = []
+            for variant in variants[:3]:
+                if isinstance(variant, str) and variant.strip():
+                    cleaned = variant.strip()
+                    # Skip if too similar to original
+                    if cleaned.lower() != base_query.lower():
+                        cleaned_variants.append(cleaned)
+            
+            return cleaned_variants
+            
+        except Exception as e:
+            print(f"[ERROR] OpenAI query expansion: {e}")
+            return []
+    
+    return await asyncio.to_thread(_call_llm)
 
 
 async def run_search(query: str, limit_per_query: int | None = None) -> List[ProviderResult]:
@@ -65,13 +129,17 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
             tasks.append(search_one(p, q))
     results_lists = await asyncio.gather(*tasks)
     results: List[ProviderResult] = [r for lst in results_lists for r in lst]
-    # Simple URL dedupe
+    # Enhanced URL canonicalization and deduplication
+    from ..services.content_deduplication import canonicalize_url
+    
     seen = set()
     deduped = []
     for r in results:
-        if r.url in seen:
+        # Use canonical URL for deduplication
+        canonical_url = canonicalize_url(r.url)
+        if canonical_url in seen:
             continue
-        seen.add(r.url)
+        seen.add(canonical_url)
         deduped.append(r)
     return deduped
 

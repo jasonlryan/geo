@@ -76,7 +76,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "canonical_url": doc.get("url"),
                 "domain": domain,
                 "title": doc.get("title") or doc.get("url"),
-                "author": None,
+                "author": doc.get("author"),
                 "publisher": (domain.split(".")[0].title() if domain else None),
                 "published_at": doc.get("published_at"),
                 "accessed_at": now_iso,
@@ -85,9 +85,19 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "paywall": False,
                 "credibility": {"score": 0.6, "rationale": "default"},
                 "content_hash": None,
-                "word_count": None,
+                "word_count": len((doc.get("raw_text") or "").split()) if doc.get("raw_text") else 0,
                 "raw_text": doc.get("raw_text") or "",
+                "search_provider": doc.get("search_provider", "unknown"),
             })
+
+        # Apply content deduplication to remove similar/identical content
+        from ..services.content_deduplication import deduplicate_sources, analyze_deduplication_stats
+        original_source_count = len(sources)
+        sources = deduplicate_sources(sources)
+        dedup_stats = analyze_deduplication_stats(sources, sources)  # For logging
+        
+        if original_source_count != len(sources):
+            print(f"[DEDUP] Removed {original_source_count - len(sources)} duplicate sources")
 
         bundle = {
             "run": {
@@ -129,10 +139,15 @@ def create_run(body: SearchRequest) -> SearchResponse:
                         "source_id": sid,
                         "coverage_score": 0.6,
                         "stance": "supports",
-                        "snippet": "",
-                        "start_offset": 0,
-                        "end_offset": 0,
+                        "snippet": "",  # Will be filled by alignment
+                        "start_offset": 0,  # Will be filled by alignment
+                        "end_offset": 0,  # Will be filled by alignment
                     })
+            
+            # Apply snippet alignment to extract actual quoted passages
+            from ..services.snippet_alignment import align_evidence_snippets
+            evidence = align_evidence_snippets(claims, sources, evidence)
+            
             bundle["claims"] = claims
             bundle["evidence"] = evidence
         # Return real bundle with actual data
@@ -252,4 +267,20 @@ async def get_unique_subjects():
         return {"subjects": sorted(list(subjects))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get subjects: {str(e)}")
+
+
+@router.get("/query-expansion")
+async def get_query_expansion(query: str):
+    """Get query expansion variants for a given query."""
+    try:
+        from ..services.search_pipeline import expand_queries
+        variants = await expand_queries(query)
+        
+        return {
+            "original_query": query,
+            "variants": variants,
+            "expansion_count": len(variants) - 1  # Exclude original query
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to expand query: {str(e)}")
 

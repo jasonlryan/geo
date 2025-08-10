@@ -119,6 +119,127 @@ def get_provider_performance(run_id: str):
     }
 
 
+@router.get("/runs/{run_id}/snippets")
+def get_snippet_alignment(run_id: str):
+    """Get snippet alignment analysis for this run's evidence."""
+    run = STORE.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    evidence = run.get("evidence", [])
+    claims = run.get("claims", [])
+    sources = run.get("sources", [])
+    
+    # Create lookup maps
+    claim_map = {c["claim_id"]: c for c in claims}
+    source_map = {s["source_id"]: s for s in sources}
+    
+    # Analyze snippet alignment quality
+    alignment_stats = {
+        "total_evidence": len(evidence),
+        "aligned_evidence": 0,
+        "high_confidence_alignments": 0,
+        "medium_confidence_alignments": 0,
+        "low_confidence_alignments": 0,
+        "average_confidence": 0.0,
+        "evidence_with_snippets": []
+    }
+    
+    confidence_sum = 0.0
+    
+    for ev in evidence:
+        has_alignment = bool(ev.get("snippet", "").strip())
+        alignment_confidence = ev.get("alignment_confidence", 0.0)
+        
+        if has_alignment:
+            alignment_stats["aligned_evidence"] += 1
+            confidence_sum += alignment_confidence
+            
+            if alignment_confidence >= 0.8:
+                alignment_stats["high_confidence_alignments"] += 1
+            elif alignment_confidence >= 0.5:
+                alignment_stats["medium_confidence_alignments"] += 1
+            else:
+                alignment_stats["low_confidence_alignments"] += 1
+        
+        # Include detailed alignment info
+        claim = claim_map.get(ev.get("claim_id"))
+        source = source_map.get(ev.get("source_id"))
+        
+        alignment_stats["evidence_with_snippets"].append({
+            "claim_id": ev.get("claim_id"),
+            "source_id": ev.get("source_id"),
+            "claim_text": claim.get("text", "") if claim else "",
+            "source_title": source.get("title", "") if source else "",
+            "source_domain": source.get("domain", "") if source else "",
+            "snippet": ev.get("snippet", ""),
+            "start_offset": ev.get("start_offset", 0),
+            "end_offset": ev.get("end_offset", 0),
+            "alignment_confidence": alignment_confidence,
+            "has_alignment": has_alignment
+        })
+    
+    if alignment_stats["aligned_evidence"] > 0:
+        alignment_stats["average_confidence"] = round(confidence_sum / alignment_stats["aligned_evidence"], 3)
+    
+    alignment_stats["alignment_rate"] = round(
+        (alignment_stats["aligned_evidence"] / len(evidence) * 100) if evidence else 0, 1
+    )
+    
+    return alignment_stats
+
+
+@router.get("/runs/{run_id}/deduplication")
+def get_deduplication_analysis(run_id: str):
+    """Get content deduplication analysis for this run."""
+    run = STORE.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    sources = run.get("sources", [])
+    provider_results = run.get("provider_results", [])
+    
+    # Analyze deduplication effectiveness
+    analysis = {
+        "provider_results_count": len(provider_results),
+        "final_sources_count": len(sources),
+        "deduplication_applied": any(s.get("dedup_method") for s in sources),
+        "sources_by_provider": {},
+        "canonical_urls": [],
+        "similar_content_groups": []
+    }
+    
+    # Count sources by provider
+    for source in sources:
+        provider = source.get("search_provider", "unknown")
+        analysis["sources_by_provider"][provider] = analysis["sources_by_provider"].get(provider, 0) + 1
+    
+    # Show canonical URLs
+    for source in sources:
+        canonical_url = source.get("canonical_url")
+        if canonical_url and canonical_url != source.get("url"):
+            analysis["canonical_urls"].append({
+                "original": source.get("url"),
+                "canonical": canonical_url,
+                "source_id": source.get("source_id")
+            })
+    
+    # Show similar content groups
+    for source in sources:
+        similar_urls = source.get("similar_urls", [])
+        if similar_urls:
+            analysis["similar_content_groups"].append({
+                "primary_source": {
+                    "source_id": source.get("source_id"),
+                    "url": source.get("url"),
+                    "title": source.get("title")
+                },
+                "similar_sources": similar_urls
+            })
+    
+    return analysis
+
+
 @router.get("/runs/{run_id}/report.md")
 def get_run_report(run_id: str):
     run = STORE.get_run(run_id)
