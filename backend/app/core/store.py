@@ -28,6 +28,11 @@ class Store:
             media_type = source.get("media_type", "")
             source["category"] = categorize_source(domain, media_type)
         
+        # Add computed analysis with funnel metrics
+        from ..services.analysis import compute_analysis
+        analysis = compute_analysis(bundle)
+        bundle["analysis"] = analysis  # Always include analysis metrics
+        
         # Keep an in-memory mirror for local dev convenience
         self._mem[run_id] = bundle
 

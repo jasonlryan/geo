@@ -110,3 +110,39 @@ def categorize_source(domain: str, media_type: str = "") -> str:
     
     # Default to corporate
     return "corporate"
+
+
+def classify_authority(credibility_score: float) -> str:
+    """Classify source authority level for intelligence analysis."""
+    if credibility_score >= 0.8:
+        return "high"
+    elif credibility_score >= 0.6:
+        return "medium"
+    else:
+        return "low"
+
+
+def classify_recency(published_at: str | None) -> str:
+    """Classify content recency for intelligence analysis."""
+    if not published_at:
+        return "unknown"
+    
+    from datetime import datetime, timedelta
+    try:
+        # Handle ISO format with or without Z suffix
+        if published_at.endswith('Z'):
+            pub_date = datetime.fromisoformat(published_at[:-1] + '+00:00')
+        else:
+            pub_date = datetime.fromisoformat(published_at)
+            
+        now = datetime.now(pub_date.tzinfo) if pub_date.tzinfo else datetime.now()
+        age = now - pub_date
+        
+        if age <= timedelta(days=30):
+            return "recent"
+        elif age <= timedelta(days=180):
+            return "medium"
+        else:
+            return "stale"
+    except (ValueError, TypeError):
+        return "unknown"

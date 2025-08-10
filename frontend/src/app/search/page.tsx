@@ -9,15 +9,7 @@ import { Button } from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 // Insights is now a dedicated route: /insights
 
-const SUBJECTS = [
-  "Executive Search",
-  "Technology Leadership", 
-  "Healthcare Executive",
-  "Financial Services",
-  "Manufacturing",
-  "Nonprofit Leadership",
-  "Startup Growth"
-];
+// No hardcoded subjects - user can type any subject
 
 export default function SearchPage() {
   const router = useRouter();
@@ -259,17 +251,13 @@ export default function SearchPage() {
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Subject Area
             </label>
-            <select
+            <input
+              type="text"
               className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="e.g., AI & Technology"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-            >
-              {SUBJECTS.map((subj) => (
-                <option key={subj} value={subj}>
-                  {subj}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
         
