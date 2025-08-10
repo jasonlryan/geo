@@ -55,6 +55,9 @@ def create_run(body: SearchRequest) -> SearchResponse:
         # If we're already in an event loop (e.g., called from async context), run directly
         results = asyncio.get_event_loop().run_until_complete(run_search(body.query))
 
+    # Extract provider performance data if available
+    provider_performance = getattr(results, 'provider_performance', {})
+
     if results:
         # Fetch top pages and build minimal real-only bundle
         try:
@@ -88,6 +91,13 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "word_count": len((doc.get("raw_text") or "").split()) if doc.get("raw_text") else 0,
                 "raw_text": doc.get("raw_text") or "",
                 "search_provider": doc.get("search_provider", "unknown"),
+                # Reproducibility: extraction method used
+                "extraction_method": doc.get("extraction_method", "trafilatura+readability"),
+                "extraction_confidence": doc.get("extraction_confidence", 0.8),
+                # Multi-provider consensus metadata (if available)
+                "discovered_by": doc.get("discovered_by", [doc.get("search_provider", "unknown")]),
+                "provider_scores": doc.get("provider_scores", {doc.get("search_provider", "unknown"): 0.5}),
+                "consensus_boost": doc.get("consensus_boost", 0.0),
             })
 
         # Apply content deduplication to remove similar/identical content
@@ -107,7 +117,19 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "created_at": now_iso,
                 "params": body.filters or {},
                 "timings": {"total_ms": 0},
-                "search_model": "Tavily",
+                "search_model": "Multi-Provider",
+                # Reproducibility metadata for research
+                "pipeline_version": os.getenv("PIPELINE_VERSION", "v1.2.0"),
+                "models": {
+                    "composer": os.getenv("OPENAI_MODEL_COMPOSER", "gpt-4o-mini"),
+                    "search": os.getenv("OPENAI_MODEL_SEARCH", "gpt-4o-mini"),
+                    "analysis": os.getenv("OPENAI_MODEL_ANALYSIS", "gpt-4o-mini")
+                },
+                "providers_enabled": [r.provider for r in results],
+                "authority_floor_enabled": os.getenv("AUTHORITY_FLOOR_ENABLED", "true").lower() == "true",
+                "min_authority_sources": int(os.getenv("MIN_AUTHORITY_SOURCES", "2")),
+                # TODO: Add git SHA when available
+                "git_sha": os.getenv("GIT_SHA", "unknown"),
             },
             "sources": sources,
             "claims": [],
@@ -116,6 +138,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
             "answer": {"text": ""},
             "provider_results": [{"title": r.title, "url": r.url, "provider": r.provider} for r in results],
             "fetched_docs": docs,
+            "provider_performance": provider_performance,
         }
 
         if sources:

@@ -17,10 +17,18 @@ def _client() -> OpenAI:
 def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Ask the model to write an answer with sentence-level citations.
+    
+    Implements authority floor guardrails: refuses to compose unless minimum 
+    high-authority sources are available.
 
     Returns a dict: { "answer_text": str, "sentences": [{"text": str, "source_ids": [str]}] }
     """
     model = os.getenv("OPENAI_MODEL_COMPOSER", "gpt-4o-mini")
+    
+    # Authority floor configuration
+    min_authority_sources = int(os.getenv("MIN_AUTHORITY_SOURCES", "2"))
+    authority_floor_enabled = os.getenv("AUTHORITY_FLOOR_ENABLED", "true").lower() == "true"
+    
     src_brief = [
         {
             "source_id": s["source_id"],
@@ -34,6 +42,24 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
         }
         for s in sources
     ]
+    
+    # Apply authority floor guardrails
+    if authority_floor_enabled:
+        high_authority_sources = [
+            s for s in src_brief 
+            if s["credibility_band"] in ["A", "B"] or s["credibility_score"] >= 0.6
+        ]
+        
+        if len(high_authority_sources) < min_authority_sources:
+            # Return insufficient authority response instead of composing with low-quality sources
+            return {
+                "answer_text": f"Insufficient high-authority sources available to provide a reliable answer. Found {len(high_authority_sources)} authoritative sources, but require at least {min_authority_sources}. Consider expanding the search or using authority-biased query variants.",
+                "sentences": [],
+                "authority_floor_triggered": True,
+                "high_authority_count": len(high_authority_sources),
+                "min_required": min_authority_sources,
+                "available_sources": len(src_brief)
+            }
 
     system = (
         "You are a precise research assistant. Answer the user's query using the provided sources. "

@@ -34,10 +34,16 @@ async def expand_queries(base_query: str) -> List[str]:
         f'{base_query} research paper OR policy OR white paper',   # Favor research content
     ]
     
-    # Add selected authority variants if we have room
+    # MANDATORY: Always include at least one authority-biased variant
+    mandatory_authority = f'{base_query} site:.gov OR site:.edu OR site:.org'
+    if mandatory_authority not in variants:
+        variants.append(mandatory_authority)
+    
+    # Add additional authority variants if we have room
     current_count = len(variants)
+    remaining_authority = [v for v in authority_variants if v not in variants]
     if current_count < 4:
-        variants.extend(authority_variants[:4-current_count])
+        variants.extend(remaining_authority[:4-current_count])
     
     return variants[:4]  # Limit to 4 total variants to avoid too many API calls
 
@@ -146,14 +152,43 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
 
     # Execute all provider x query combinations in parallel
     tasks = []
+    provider_query_pairs = []
     for p in providers:
         for q in variants:
             tasks.append(search_one(p, q))
+            provider_query_pairs.append((p.name, q))
     
     results_lists = await asyncio.gather(*tasks)
     all_results: List[ProviderResult] = [r for lst in results_lists for r in lst]
     
+    # Track provider performance and zero-result cases for debugging
+    provider_performance = {}
+    for (provider_name, query), results_list in zip(provider_query_pairs, results_lists):
+        if provider_name not in provider_performance:
+            provider_performance[provider_name] = {
+                "queries_attempted": 0,
+                "queries_with_results": 0,
+                "total_results": 0,
+                "zero_result_queries": []
+            }
+        
+        stats = provider_performance[provider_name]
+        stats["queries_attempted"] += 1
+        stats["total_results"] += len(results_list)
+        
+        if len(results_list) == 0:
+            stats["zero_result_queries"].append(query[:50] + "..." if len(query) > 50 else query)
+        else:
+            stats["queries_with_results"] += 1
+    
     print(f"[INFO] Collected {len(all_results)} total results before consensus merging")
+    
+    # Log provider performance for debugging
+    for provider_name, stats in provider_performance.items():
+        success_rate = (stats["queries_with_results"] / stats["queries_attempted"] * 100) if stats["queries_attempted"] > 0 else 0
+        print(f"[PROVIDER] {provider_name}: {success_rate:.1f}% success rate ({stats['queries_with_results']}/{stats['queries_attempted']} queries), {stats['total_results']} total results")
+        if stats["zero_result_queries"]:
+            print(f"[PROVIDER] {provider_name} zero results for: {stats['zero_result_queries']}")
     
     # Use ConsensusResultMerger instead of simple deduplication
     merger = ConsensusResultMerger()
@@ -190,6 +225,10 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
         "max_consensus": max(len(r.discovered_by) for r in final_results) if final_results else 0
     }
     print(f"[RESEARCH] Consensus stats: {consensus_stats}")
+    
+    # Store provider performance data for research analysis
+    # This will be added to the bundle by the calling function
+    final_results.provider_performance = provider_performance
     
     return final_results
 
