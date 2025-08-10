@@ -25,15 +25,109 @@ export default function AboutPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>🔍 The AI Search Process (Step by Step)</CardTitle>
+          <CardTitle>🔍 How Real AI Search Works</CardTitle>
         </CardHeader>
         <CardBody>
           <p className="text-slate-700 mb-6">
             When you ask ChatGPT, Claude, or other AI systems a question, here's
-            what actually happens behind the scenes:
+            what actually happens behind the scenes (based on publicly known information):
           </p>
 
           <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              The 6-Stage AI Search Process
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                  1
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800">Query Processing</h4>
+                  <p className="text-slate-600">
+                    AI interprets your question and determines what information to search for
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                  2
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800">Web Search</h4>
+                  <p className="text-slate-600">
+                    AI searches the web for relevant sources using proprietary search methods
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                  3
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800">Content Analysis</h4>
+                  <p className="text-slate-600">
+                    AI reads and evaluates each found source for relevance and quality
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                  4
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800">Authority Assessment</h4>
+                  <p className="text-slate-600">
+                    AI applies unknown credibility filters to prioritize trustworthy sources
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                  5
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800">Citation Selection</h4>
+                  <p className="text-slate-600">
+                    AI chooses which sources to actually reference in the final answer
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                  6
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800">Answer Generation</h4>
+                  <p className="text-slate-600">
+                    AI composes the final response with citations to selected sources
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-amber-800 text-sm">
+              <strong>Important:</strong> The exact algorithms and criteria used by ChatGPT, Claude, and other AI systems 
+              are proprietary and not publicly disclosed. This is our research platform's attempt to understand 
+              these processes through observable behavior.
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>🔬 How Our Research System Works</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <p className="text-slate-700 mb-6">
+            To study the AI search process above, we've built a research platform that replicates 
+            these steps using observable tools and methods:
+          </p>
+
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">
               Our 7-Stage Research Pipeline
             </h3>
@@ -45,7 +139,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Query Expansion</h4>
                   <p className="text-slate-600">
-                    AI generates diverse search variants with authority-biased language, avoiding corporate marketing terms
+                    We generate diverse search variants with authority-biased language, avoiding corporate marketing terms
                   </p>
                 </div>
               </div>
@@ -56,7 +150,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Multi-Provider Discovery</h4>
                   <p className="text-slate-600">
-                    Search across Tavily (advanced depth) + OpenAI for diversified recall and reduced algorithmic bias
+                    We search across Tavily (advanced depth) + OpenAI for diversified recall and reduced algorithmic bias
                   </p>
                 </div>
               </div>
@@ -67,7 +161,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Authority Re-ranking</h4>
                   <p className="text-slate-600">
-                    Prioritize gov/edu/research sources over corporate blogs using credibility scoring and category boosts
+                    We prioritize gov/edu/research sources over corporate blogs using credibility scoring and category boosts
                   </p>
                 </div>
               </div>
@@ -78,7 +172,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Content Processing</h4>
                   <p className="text-slate-600">
-                    Clean text extraction with Trafilatura/Readability + content deduplication across providers
+                    We extract clean text with Trafilatura/Readability + content deduplication across providers
                   </p>
                 </div>
               </div>
@@ -89,7 +183,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">AI Citation Generation</h4>
                   <p className="text-slate-600">
-                    LLM composes answers with explicit authority prioritization instructions and credibility awareness
+                    We have LLM compose answers with explicit authority prioritization instructions and credibility awareness
                   </p>
                 </div>
               </div>
@@ -100,7 +194,7 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Snippet Alignment</h4>
                   <p className="text-slate-600">
-                    Extract and verify actual quoted passages from sources with confidence scoring
+                    We extract and verify actual quoted passages from sources with confidence scoring
                   </p>
                 </div>
               </div>
@@ -111,11 +205,19 @@ export default function AboutPage() {
                 <div>
                   <h4 className="font-semibold text-slate-800">Citation Intelligence</h4>
                   <p className="text-slate-600">
-                    Comprehensive analysis of discovery vs. citation gaps with provider performance tracking
+                    We analyze the gaps between discovered and cited sources with comprehensive performance tracking
                   </p>
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-green-800 text-sm">
+              <strong>Research Goal:</strong> By replicating AI search behavior with observable tools, 
+              we can measure and analyze what gets cited vs. what gets found, helping organizations 
+              understand how to improve their AI search citation rates.
+            </p>
           </div>
         </CardBody>
       </Card>
