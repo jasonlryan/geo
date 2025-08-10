@@ -29,13 +29,31 @@ export default function SearchPage() {
   });
 
   // Keep tab in sync with URL changes (e.g., header link clicks)
+  // Handle URL parameters (query, subject, tab)
   useEffect(() => {
+    const urlQuery = searchParams.get("q");
+    const urlSubject = searchParams.get("subject");
     const tab = (searchParams.get("tab") || "").toLowerCase();
+    
+    if (urlQuery && urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+    if (urlSubject && urlSubject !== subject) {
+      setSubject(urlSubject);
+    }
     if (tab === "analysis" && activeTab !== "analysis")
       setActiveTab("analysis");
     else if (tab === "sources" && activeTab !== "sources")
       setActiveTab("sources");
   }, [searchParams]);
+
+  // Auto-run search if query comes from URL
+  useEffect(() => {
+    const urlQuery = searchParams.get("q");
+    if (urlQuery && urlQuery.trim() && !bundle) {
+      runQuery(urlQuery.trim());
+    }
+  }, [searchParams, bundle]);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>("");
   const [credBandFilter, setCredBandFilter] = useState<string>("");
 
