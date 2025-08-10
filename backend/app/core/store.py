@@ -22,9 +22,9 @@ class Store:
         # Keep an in-memory mirror for local dev convenience
         self._mem[run_id] = bundle
 
-        # Persist the complete bundle to cache for 24h
+        # Persist the complete bundle to cache permanently (no TTL)
         try:
-            CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle, ttl=24 * 3600)
+            CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle)
         except Exception:
             # Non-fatal: continue with DB write
             pass
@@ -35,9 +35,9 @@ class Store:
             if query:
                 qhash = hashlib.sha256((query + os.getenv("PIPELINE_VERSION", "1")).encode()).hexdigest()
                 CACHE.set(CACHE.ai_key(f"query_hash:{qhash}"), run_id, ttl=30 * 60)
-                # Indices
-                CACHE.zadd(CACHE.ai_key("recent"), score=datetime.utcnow().timestamp(), member=run_id, ttl=7 * 24 * 3600)
-                CACHE.lpush(CACHE.ai_key(f"q:{qhash}"), run_id, ttl=7 * 24 * 3600)
+                # Indices - store permanently for marketing intelligence
+                CACHE.zadd(CACHE.ai_key("recent"), score=datetime.utcnow().timestamp(), member=run_id)
+                CACHE.lpush(CACHE.ai_key(f"q:{qhash}"), run_id, ttl=90 * 24 * 3600)  # 90 days for query history
                 CACHE.ltrim(CACHE.ai_key(f"q:{qhash}"), 20)
         except Exception:
             pass

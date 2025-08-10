@@ -6,7 +6,6 @@ from typing import List
 
 from .providers.base import ProviderResult
 from .fetch_parse import fetch_and_parse
-from .providers.openai_provider import OpenAISearchProvider
 from .providers.tavily_provider import TavilySearchProvider
 
 
@@ -19,12 +18,13 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
     if limit_per_query is None:
         limit_per_query = int(os.getenv("SEARCH_LIMIT_PER_QUERY", "20"))
     providers = []
-    # Prefer Tavily if available
+    # Use Tavily for web search
     try:
         providers.append(TavilySearchProvider())
-    except Exception:
-        pass
-    providers.append(OpenAISearchProvider())
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize Tavily provider: {e}")
+        # Return empty results if Tavily is not available
+        return []
     variants = await expand_queries(query)
 
     async def search_one(p, q: str) -> List[ProviderResult]:

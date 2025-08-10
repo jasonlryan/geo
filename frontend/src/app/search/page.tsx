@@ -4,8 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createRun, getRunBundle, apiBaseUrl } from "@/lib/api";
 import ExportsBar from "@/components/ExportsBar";
 import ViewReport from "@/components/ViewReport";
-import Card, { CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 // Insights is now a dedicated route: /insights
 
@@ -232,13 +232,17 @@ export default function SearchPage() {
     <div className="space-y-6">
       <form onSubmit={onSubmit} className="flex gap-2 flex-wrap items-start">
         <textarea
-          className="flex-1 border rounded-md px-3 py-2 min-h-[96px] resize-y focus-ring"
+          className="flex-1 border border-slate-300 rounded-md px-3 py-2 min-h-[96px] resize-y focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="Ask a question..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           rows={3}
         />
-        <Button type="submit" loading={loading} disabled={loading || !query.trim()}>
+        <Button
+          type="submit"
+          loading={loading}
+          disabled={loading || !query.trim()}
+        >
           {loading ? "Running…" : "Run"}
         </Button>
         <Button
@@ -254,13 +258,21 @@ export default function SearchPage() {
       </form>
 
       {loading && (
-        <div className="flex items-center gap-2 text-sm text-gray-700" role="status" aria-live="polite">
+        <div
+          className="flex items-center gap-2 text-sm text-slate-600"
+          role="status"
+          aria-live="polite"
+        >
           <Spinner />
           <span>Running search…</span>
         </div>
       )}
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && (
+        <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
+          {error}
+        </div>
+      )}
 
       {bundle && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -270,10 +282,18 @@ export default function SearchPage() {
                 <CardTitle>Answer</CardTitle>
               </CardHeader>
               <CardBody>
-                <div className="leading-relaxed prose max-w-none" dangerouslySetInnerHTML={{ __html: answerHtml }} />
-                <div className="text-xs text-gray-500">
-                  Run ID: {bundle.run_id} · API: {apiBaseUrl} · {" "}
-                  <a className="underline" href={`/trace/${bundle.run_id}`}>View trace</a>
+                <div
+                  className="leading-relaxed prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: answerHtml }}
+                />
+                <div className="text-xs text-slate-500">
+                  Run ID: {bundle.run_id} · API: {apiBaseUrl} ·{" "}
+                  <a
+                    className="underline text-blue-600 hover:text-blue-800"
+                    href={`/trace/${bundle.run_id}`}
+                  >
+                    View trace
+                  </a>
                 </div>
                 <div className="pt-2">
                   <ExportsBar bundle={bundle} />
@@ -289,7 +309,10 @@ export default function SearchPage() {
                 <ul className="space-y-2 list-disc pl-5">
                   {claimsList.map((c: any) => (
                     <li key={c.claim_id}>
-                      <span className="font-medium">#{c.answer_sentence_index + 1}:</span> {c.text}
+                      <span className="font-medium">
+                        #{c.answer_sentence_index + 1}:
+                      </span>{" "}
+                      {c.text}
                     </li>
                   ))}
                 </ul>
@@ -298,17 +321,17 @@ export default function SearchPage() {
           </div>
 
           <aside className="space-y-4 lg:col-span-5">
-            <section className="bg-white rounded border p-0 overflow-hidden">
-              <div className="flex border-b">
+            <Card className="p-0 overflow-hidden">
+              <div className="flex border-b border-slate-200">
                 <button
                   onClick={() => {
                     setActiveTab("sources");
                     router.replace("/search?tab=sources", { scroll: false });
                   }}
-                  className={`px-3 py-2 text-sm ${
+                  className={`px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === "sources"
-                      ? "border-b-2 border-black"
-                      : "text-gray-600"
+                      ? "border-b-2 border-blue-600 text-blue-600 bg-blue-50"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
                 >
                   Sources
@@ -318,22 +341,21 @@ export default function SearchPage() {
                     setActiveTab("analysis");
                     router.replace("/search?tab=analysis", { scroll: false });
                   }}
-                  className={`px-3 py-2 text-sm ${
+                  className={`px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === "analysis"
-                      ? "border-b-2 border-black"
-                      : "text-gray-600"
+                      ? "border-b-2 border-blue-600 text-blue-600 bg-blue-50"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
                 >
                   Analysis
                 </button>
-                {/* Insights tab removed - use header link to /insights */}
               </div>
               <div className="p-4">
                 {activeTab === "sources" && (
                   <div className="space-y-3">
                     <div className="flex gap-2 items-center text-sm">
                       <select
-                        className="border rounded px-2 py-1"
+                        className="border border-slate-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                         value={mediaTypeFilter}
                         onChange={(e) => setMediaTypeFilter(e.target.value)}
                       >
@@ -345,7 +367,7 @@ export default function SearchPage() {
                         ))}
                       </select>
                       <select
-                        className="border rounded px-2 py-1"
+                        className="border border-slate-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                         value={credBandFilter}
                         onChange={(e) => setCredBandFilter(e.target.value)}
                       >
@@ -362,10 +384,14 @@ export default function SearchPage() {
                         <div className="font-medium">
                           [{idx + 1}] {s.title}
                         </div>
-                        <div className="text-gray-600">
+                        <div className="text-slate-600">
                           {s.domain} · {categorize(s)} · cred{" "}
                           {s.credibility.score} ·{" "}
-                          <a className="underline" href={s.url} target="_blank">
+                          <a
+                            className="underline text-blue-600 hover:text-blue-800"
+                            href={s.url}
+                            target="_blank"
+                          >
                             open
                           </a>
                         </div>
@@ -380,7 +406,7 @@ export default function SearchPage() {
                     </div>
                     <div>
                       <div className="font-medium mb-1">Funnel</div>
-                      <div className="text-gray-700">
+                      <div className="text-slate-700">
                         Proposed: {bundle.analysis?.funnel?.proposed ?? 0} ·
                         Fetched: {bundle.analysis?.funnel?.fetched ?? 0} ·
                         Cited: {bundle.analysis?.funnel?.cited ?? 0}
@@ -396,7 +422,7 @@ export default function SearchPage() {
                               .map((r: any, i: number) => (
                                 <li key={i}>
                                   <a
-                                    className="underline"
+                                    className="underline text-blue-600 hover:text-blue-800"
                                     href={r.url}
                                     target="_blank"
                                   >
@@ -416,7 +442,7 @@ export default function SearchPage() {
                               .map((d: any, i: number) => (
                                 <li key={i}>
                                   <a
-                                    className="underline"
+                                    className="underline text-blue-600 hover:text-blue-800"
                                     href={d.url}
                                     target="_blank"
                                   >
@@ -501,7 +527,7 @@ export default function SearchPage() {
                 )}
                 {/* Insights content lives at /insights */}
               </div>
-            </section>
+            </Card>
           </aside>
         </div>
       )}

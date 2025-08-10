@@ -129,9 +129,23 @@ def generate_llm_analysis_from_bundle(run_id: str, bundle_data: dict):
         if not data:
             return {"ok": False, "reason": "generation_failed"}
         
-        # Cache for 60 minutes (Redis + mem fallback)
+        # Cache for 24 hours with metadata (Redis + mem fallback)
         try:
-            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data, ttl=3600)
+            # Get run data for metadata
+            run_data = bundle_data.get("run", {})
+            enriched_data = {
+                **data,
+                "metadata": {
+                    "run_id": run_id,
+                    "query": run_data.get("query", ""),
+                    "search_model": run_data.get("search_model", "Unknown"),
+                    "created_at": run_data.get("created_at", ""),
+                    "generated_at": datetime.utcnow().isoformat() + "Z"
+                }
+            }
+            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), enriched_data)  # Permanent storage for intelligence reports
+            # Add to reports index for easy retrieval - permanent
+            CACHE.zadd(CACHE.ai_key("reports"), score=datetime.utcnow().timestamp(), member=run_id)
         except Exception:
             pass
         _LLM_ANALYSIS_CACHE[run_id] = {"ts": now, "ttl": 3600, "data": data}
@@ -169,7 +183,10 @@ def get_llm_citation_analysis(run_id: str):
             return {"ok": False, "reason": "generation_failed"}
         
         try:
-            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data, ttl=3600)
+            # Store permanently for marketing intelligence
+            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data)
+            # Add to reports index
+            CACHE.zadd(CACHE.ai_key("reports"), score=datetime.utcnow().timestamp(), member=run_id)
         except Exception:
             pass
         _LLM_ANALYSIS_CACHE[run_id] = {"ts": now, "ttl": 3600, "data": data}
@@ -207,6 +224,33 @@ def insights_query(qhash: str, limit: int = 20):
     key = CACHE.ai_key(f"q:{qhash}")
     items = CACHE.lrange(key, 0, max(0, limit - 1))
     return {"items": items}
+
+
+@router.get("/insights/reports")
+def insights_reports(limit: int = 20):
+    """Return recent intelligence reports with metadata."""
+    try:
+        # Get recent reports from index
+        reports_index = CACHE.zrevrange_withscores(CACHE.ai_key("reports"), 0, max(0, limit - 1))
+        reports = []
+        
+        for run_id, timestamp in reports_index:
+            # Get the analysis data
+            analysis = CACHE.get_json(CACHE.ai_key(f"analysis:{run_id}"))
+            if analysis and "metadata" in analysis:
+                metadata = analysis["metadata"]
+                reports.append({
+                    "run_id": run_id,
+                    "query": metadata.get("query", ""),
+                    "search_model": metadata.get("search_model", "Unknown"),
+                    "created_at": metadata.get("created_at", ""),
+                    "generated_at": metadata.get("generated_at", ""),
+                    "has_analysis": bool(analysis.get("analysis") or analysis.get("classifications"))
+                })
+        
+        return {"reports": reports}
+    except Exception as e:
+        return {"reports": [], "error": str(e)}
 
 
 @router.get("/insights/aggregate")
