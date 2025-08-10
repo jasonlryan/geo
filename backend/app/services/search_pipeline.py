@@ -7,6 +7,7 @@ from typing import List
 from .providers.base import ProviderResult
 from .fetch_parse import fetch_and_parse
 from .providers.tavily_provider import TavilySearchProvider
+from .providers.openai_provider import OpenAISearchProvider
 
 
 async def expand_queries(base_query: str) -> List[str]:
@@ -18,12 +19,21 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
     if limit_per_query is None:
         limit_per_query = int(os.getenv("SEARCH_LIMIT_PER_QUERY", "20"))
     providers = []
-    # Use Tavily for web search
+    
+    # Multi-provider search: Tavily + OpenAI for diversified recall
     try:
         providers.append(TavilySearchProvider())
     except Exception as e:
         print(f"[ERROR] Failed to initialize Tavily provider: {e}")
-        # Return empty results if Tavily is not available
+    
+    try:
+        providers.append(OpenAISearchProvider())
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize OpenAI provider: {e}")
+    
+    # Return empty if no providers available
+    if not providers:
+        print("[ERROR] No search providers available")
         return []
     variants = await expand_queries(query)
 
@@ -64,11 +74,12 @@ async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = Non
             "url": r.url,
             "snippet": r.snippet,
             "published_at": p.get("published_at") or r.published_at,  # Prefer extracted date
-            "provider": r.provider,
+            "provider": r.provider,  # Track which search provider found this source
             "raw_text": p["text"],
             "author": p.get("author", ""),
             "extraction_method": p.get("extraction_method", "unknown"),
             "content_length": p.get("content_length", 0),
+            "search_provider": r.provider,  # Explicit field for provider attribution analysis
         })
     return docs
 

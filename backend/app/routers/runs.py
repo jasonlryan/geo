@@ -70,8 +70,53 @@ def get_trace(run_id: str):
         base["provider_results"] = run["provider_results"]
     if "fetched_docs" in run:
         base["fetched_docs"] = run["fetched_docs"]
+    if "provider_performance" in run:
+        base["provider_performance"] = run["provider_performance"]
     base["analysis"] = compute_analysis(run)
     return base
+
+
+@router.get("/runs/{run_id}/providers")
+def get_provider_performance(run_id: str):
+    """Get search provider performance analytics for this run."""
+    run = STORE.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    provider_performance = run.get("provider_performance", {})
+    if not provider_performance:
+        return {"providers": {}, "summary": {"total_providers": 0}}
+    
+    # Add comparative analysis
+    total_sources = sum(stats["count"] for stats in provider_performance.values())
+    
+    summary = {
+        "total_providers": len(provider_performance),
+        "total_sources": total_sources,
+        "provider_comparison": []
+    }
+    
+    # Calculate provider comparison metrics
+    for provider, stats in provider_performance.items():
+        market_share = (stats["count"] / total_sources * 100) if total_sources > 0 else 0
+        
+        summary["provider_comparison"].append({
+            "provider": provider,
+            "sources": stats["count"],
+            "market_share_pct": round(market_share, 1),
+            "avg_credibility": stats.get("avg_credibility", 0),
+            "avg_content_length": stats.get("avg_content_length", 0),
+            "top_categories": sorted(stats.get("categories", {}).items(), 
+                                   key=lambda x: x[1], reverse=True)[:3]
+        })
+    
+    # Sort by market share
+    summary["provider_comparison"].sort(key=lambda x: x["market_share_pct"], reverse=True)
+    
+    return {
+        "providers": provider_performance,
+        "summary": summary
+    }
 
 
 @router.get("/runs/{run_id}/report.md")
@@ -279,6 +324,178 @@ def insights_subjects():
                 subjects.add(subject)
     
     return {"subjects": sorted(list(subjects))}
+
+
+@router.get("/insights/providers")
+def insights_providers(limit: int = 50, subject: str = None):
+    """Analyze search provider performance across multiple runs for API comparison."""
+    recent = CACHE.zrevrange_withscores(CACHE.ai_key("recent"), 0, max(0, limit - 1))
+    run_ids = [m for m, _ in recent]
+    
+    # Aggregate provider performance across runs
+    provider_aggregates = {}
+    runs_analyzed = 0
+    
+    for run_id in run_ids:
+        bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+        if not bundle:
+            continue
+        
+        # Filter by subject if provided
+        if subject:
+            bundle_subject = bundle.get("run", {}).get("subject")
+            if bundle_subject != subject:
+                continue
+        
+        runs_analyzed += 1
+        provider_performance = bundle.get("provider_performance", {})
+        
+        # Aggregate metrics across runs
+        for provider, stats in provider_performance.items():
+            if provider not in provider_aggregates:
+                provider_aggregates[provider] = {
+                    "total_runs": 0,
+                    "total_sources": 0,
+                    "credibility_scores": [],
+                    "content_lengths": [],
+                    "category_distribution": {},
+                    "runs_present": 0
+                }
+            
+            agg = provider_aggregates[provider]
+            agg["runs_present"] += 1
+            agg["total_sources"] += stats.get("count", 0)
+            agg["credibility_scores"].append(stats.get("avg_credibility", 0))
+            agg["content_lengths"].append(stats.get("avg_content_length", 0))
+            
+            # Aggregate category distributions
+            for category, count in stats.get("categories", {}).items():
+                if category not in agg["category_distribution"]:
+                    agg["category_distribution"][category] = 0
+                agg["category_distribution"][category] += count
+    
+    # Calculate final comparative metrics
+    provider_analysis = []
+    total_all_sources = sum(agg["total_sources"] for agg in provider_aggregates.values())
+    
+    for provider, agg in provider_aggregates.items():
+        if agg["total_sources"] == 0:
+            continue
+            
+        avg_credibility = sum(agg["credibility_scores"]) / len(agg["credibility_scores"]) if agg["credibility_scores"] else 0
+        avg_content_length = sum(agg["content_lengths"]) / len(agg["content_lengths"]) if agg["content_lengths"] else 0
+        market_share = (agg["total_sources"] / total_all_sources * 100) if total_all_sources > 0 else 0
+        query_coverage = (agg["runs_present"] / runs_analyzed * 100) if runs_analyzed > 0 else 0
+        
+        # Top categories for this provider
+        top_categories = sorted(agg["category_distribution"].items(), 
+                              key=lambda x: x[1], reverse=True)[:5]
+        
+        provider_analysis.append({
+            "provider": provider,
+            "runs_analyzed": runs_analyzed,
+            "runs_present": agg["runs_present"],
+            "query_coverage_pct": round(query_coverage, 1),
+            "total_sources": agg["total_sources"],
+            "market_share_pct": round(market_share, 1),
+            "avg_credibility": round(avg_credibility, 3),
+            "avg_content_length": round(avg_content_length, 0),
+            "source_diversity": len(agg["category_distribution"]),
+            "top_categories": top_categories,
+            "effectiveness_score": round(query_coverage * avg_credibility * 10, 2)  # Composite metric
+        })
+    
+    # Sort by effectiveness score
+    provider_analysis.sort(key=lambda x: x["effectiveness_score"], reverse=True)
+    
+    # Generate comparative insights
+    insights = generate_provider_insights(provider_analysis, runs_analyzed)
+    
+    return {
+        "summary": {
+            "runs_analyzed": runs_analyzed,
+            "providers_found": len(provider_analysis),
+            "total_sources": total_all_sources,
+            "subject_filter": subject
+        },
+        "providers": provider_analysis,
+        "comparative_insights": insights
+    }
+
+
+def generate_provider_insights(provider_analysis, runs_analyzed):
+    """Generate insights about provider performance comparison."""
+    if not provider_analysis:
+        return {}
+    
+    insights = {
+        "leader": None,
+        "coverage_champion": None,
+        "quality_leader": None,
+        "niche_specialist": None,
+        "recommendations": []
+    }
+    
+    # Overall leader (highest effectiveness score)
+    if provider_analysis:
+        leader = provider_analysis[0]
+        insights["leader"] = {
+            "provider": leader["provider"],
+            "effectiveness_score": leader["effectiveness_score"],
+            "reason": f"Highest combined score of query coverage ({leader['query_coverage_pct']}%) and credibility ({leader['avg_credibility']})"
+        }
+    
+    # Coverage champion (highest query coverage)
+    coverage_sorted = sorted(provider_analysis, key=lambda x: x["query_coverage_pct"], reverse=True)
+    if coverage_sorted:
+        champion = coverage_sorted[0]
+        insights["coverage_champion"] = {
+            "provider": champion["provider"],
+            "coverage_pct": champion["query_coverage_pct"],
+            "reason": f"Present in {champion['query_coverage_pct']}% of queries analyzed"
+        }
+    
+    # Quality leader (highest avg credibility)
+    quality_sorted = sorted(provider_analysis, key=lambda x: x["avg_credibility"], reverse=True)
+    if quality_sorted:
+        quality_leader = quality_sorted[0]
+        insights["quality_leader"] = {
+            "provider": quality_leader["provider"],
+            "avg_credibility": quality_leader["avg_credibility"],
+            "reason": f"Highest average credibility score of {quality_leader['avg_credibility']}"
+        }
+    
+    # Niche specialist (high credibility but lower coverage)
+    niche_candidates = [p for p in provider_analysis if p["query_coverage_pct"] < 50 and p["avg_credibility"] > 0.7]
+    if niche_candidates:
+        specialist = max(niche_candidates, key=lambda x: x["avg_credibility"])
+        insights["niche_specialist"] = {
+            "provider": specialist["provider"],
+            "reason": f"High quality ({specialist['avg_credibility']}) but selective presence ({specialist['query_coverage_pct']}%)"
+        }
+    
+    # Generate recommendations
+    if len(provider_analysis) == 1:
+        insights["recommendations"].append({
+            "action": "Add additional search providers",
+            "rationale": "Single provider limits recall and introduces algorithmic bias",
+            "priority": "HIGH"
+        })
+    
+    if len(provider_analysis) >= 2:
+        # Compare top 2 providers
+        leader = provider_analysis[0]
+        runner_up = provider_analysis[1]
+        gap = leader["effectiveness_score"] - runner_up["effectiveness_score"]
+        
+        if gap > 50:
+            insights["recommendations"].append({
+                "action": f"Optimize {runner_up['provider']} utilization",
+                "rationale": f"Large performance gap ({gap:.0f} points) suggests underutilization",
+                "priority": "MEDIUM"
+            })
+    
+    return insights
 
 
 @router.get("/insights/aggregate")

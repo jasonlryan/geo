@@ -17,6 +17,8 @@ class Store:
         
         # Add source categorization and credibility scoring to each source
         sources = bundle.get("sources", [])
+        provider_stats = {}
+        
         for source in sources:
             domain = source.get("domain", "")
             media_type = source.get("media_type", "")
@@ -34,6 +36,39 @@ class Store:
                 title=source.get("title", "")
             )
             source["credibility"] = credibility
+            
+            # Track provider performance stats
+            provider = source.get("search_provider", "unknown")
+            if provider not in provider_stats:
+                provider_stats[provider] = {
+                    "count": 0,
+                    "total_credibility": 0.0,
+                    "categories": {},
+                    "avg_content_length": 0,
+                    "total_content_length": 0
+                }
+            
+            stats = provider_stats[provider]
+            stats["count"] += 1
+            stats["total_credibility"] += credibility.get("score", 0.0)
+            stats["total_content_length"] += source.get("content_length", 0)
+            
+            # Track category distribution per provider
+            if category not in stats["categories"]:
+                stats["categories"][category] = 0
+            stats["categories"][category] += 1
+        
+        # Calculate averages and finalize provider stats
+        for provider, stats in provider_stats.items():
+            if stats["count"] > 0:
+                stats["avg_credibility"] = round(stats["total_credibility"] / stats["count"], 3)
+                stats["avg_content_length"] = round(stats["total_content_length"] / stats["count"], 0)
+            # Remove totals (keep only aggregated values)
+            del stats["total_credibility"]
+            del stats["total_content_length"]
+        
+        # Add provider performance data to bundle
+        bundle["provider_performance"] = provider_stats
         
         # Add computed analysis with funnel metrics
         from ..services.analysis import compute_analysis
@@ -62,7 +97,7 @@ class Store:
             except Exception:
                 ts = None
         if ts is None:
-            ts = datetime.utcnow().timestamp()
+            ts = datetime.now(datetime.UTC).timestamp()
         CACHE.zadd(CACHE.ai_key("recent"), score=ts, member=run_id)
         
         return run_id
