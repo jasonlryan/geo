@@ -28,7 +28,7 @@ class Store:
         bundle["analysis"] = analysis  # Always include analysis metrics
 
         # ONLY REDIS - Store the complete bundle permanently (no TTL)
-        CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle)
+        CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle, ttl=-1)
 
         # Store query hash for deduplication (30m TTL)
         query = (run_data.get("query") or "").strip().lower()
@@ -61,10 +61,10 @@ class Store:
     def list_runs(self) -> Dict[str, Dict[str, Any]]:
         # Get all runs from Redis
         recent_key = CACHE.ai_key("recent")
-        run_ids = CACHE.zrevrange(recent_key, 0, -1)
+        items = CACHE.zrevrange_withscores(recent_key, 0, -1)
         
         runs = {}
-        for run_id in run_ids:
+        for run_id, _ in items:  # Ignore the scores, just get run_ids
             bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
             if bundle:
                 runs[run_id] = bundle

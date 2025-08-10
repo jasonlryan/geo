@@ -143,7 +143,7 @@ def generate_llm_analysis_from_bundle(run_id: str, bundle_data: dict):
                     "generated_at": datetime.utcnow().isoformat() + "Z"
                 }
             }
-            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), enriched_data)  # Permanent storage for intelligence reports
+            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), enriched_data, ttl=-1)  # Permanent storage for intelligence reports
             # Add to reports index for easy retrieval - permanent
             CACHE.zadd(CACHE.ai_key("reports"), score=datetime.utcnow().timestamp(), member=run_id)
         except Exception:
@@ -184,7 +184,7 @@ def get_llm_citation_analysis(run_id: str):
         
         try:
             # Store permanently for marketing intelligence
-            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data)
+            CACHE.set_json(CACHE.ai_key(f"analysis:{run_id}"), data, ttl=-1)
             # Add to reports index
             CACHE.zadd(CACHE.ai_key("reports"), score=datetime.utcnow().timestamp(), member=run_id)
         except Exception:

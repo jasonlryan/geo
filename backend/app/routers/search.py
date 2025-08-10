@@ -228,18 +228,18 @@ async def get_unique_subjects():
     try:
         from ..core.cache import CACHE
         
-        # Get all run keys from Redis
+        # Get all run keys from Redis using the public API
         pattern = CACHE.ai_key("*")
-        run_keys = CACHE._redis.keys(pattern) if CACHE._redis else []
+        run_keys = CACHE.keys(pattern)
         
         subjects = set()
         for key in run_keys:
             try:
-                # Skip non-run keys (like query hashes)
-                if "query_hash:" in key.decode():
+                # Skip non-run keys (like query hashes, analysis, etc.)
+                if any(skip_pattern in key for skip_pattern in ["query_hash:", ":analysis:", ":reports", ":recent", ":q:"]):
                     continue
                     
-                bundle = CACHE.get_json(key.decode())
+                bundle = CACHE.get_json(key)
                 if bundle and "run" in bundle:
                     subject = bundle["run"].get("subject", "").strip()
                     if subject and subject != "":

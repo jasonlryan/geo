@@ -36,11 +36,28 @@ class Cache:
         return value
 
     def set(self, key: str, value: str, ttl: Optional[int] = None) -> None:
-        ttl = ttl or self.ttl_default
+        # If no TTL specified, use default. If explicitly None passed, make it permanent.
+        if ttl is None:
+            ttl = self.ttl_default
+        elif ttl == -1:  # Use -1 as sentinel for permanent storage
+            ttl = None
+            
         if self._redis is not None:
-            self._redis.setex(key, ttl, value)
+            if ttl is None:
+                # Permanent storage - no TTL
+                self._redis.set(key, value)
+            else:
+                # Temporary storage with TTL
+                self._redis.setex(key, ttl, value)
             return
-        self._mem[key] = (time.time() + ttl, value)
+        
+        # Memory backend
+        if ttl is None:
+            # Permanent storage - use sentinel for "no expiry"
+            self._mem[key] = (float("inf"), value)
+        else:
+            # Temporary storage with TTL
+            self._mem[key] = (time.time() + ttl, value)
 
     def get_json(self, key: str) -> Optional[Any]:
         val = self.get(key)
