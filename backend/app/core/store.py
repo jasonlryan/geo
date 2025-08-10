@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional
 from ..core.db import get_session
 from ..core.cache import CACHE
 from ..models import Run, Source, Claim, Evidence, Classification
+from ..utils.source_categorization import categorize_source
 
 
 class Store:
@@ -19,6 +20,14 @@ class Store:
         run_data = bundle["run"]
         run_id = run_data.get("run_id") or str(uuid.uuid4())
         run_data["run_id"] = run_id
+        
+        # Add source categorization to each source
+        sources = bundle.get("sources", [])
+        for source in sources:
+            domain = source.get("domain", "")
+            media_type = source.get("media_type", "")
+            source["category"] = categorize_source(domain, media_type)
+        
         # Keep an in-memory mirror for local dev convenience
         self._mem[run_id] = bundle
 

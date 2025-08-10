@@ -9,10 +9,21 @@ import { Button } from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 // Insights is now a dedicated route: /insights
 
+const SUBJECTS = [
+  "Executive Search",
+  "Technology Leadership", 
+  "Healthcare Executive",
+  "Financial Services",
+  "Manufacturing",
+  "Nonprofit Leadership",
+  "Startup Growth"
+];
+
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
+  const [subject, setSubject] = useState("Executive Search");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bundle, setBundle] = useState<any | null>(null);
@@ -41,7 +52,7 @@ export default function SearchPage() {
     setError(null);
     setBundle(null);
     try {
-      const { run_id } = await createRun(q, true);
+      const { run_id } = await createRun(q, subject, true);
       const data = await getRunBundle(run_id);
       setBundle({ run_id, ...data });
       try {
@@ -63,7 +74,7 @@ export default function SearchPage() {
 
   const generateRandomQuery = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/api/search/random-query`);
+      const response = await fetch(`${apiBaseUrl}/api/search/random-query?subject=${encodeURIComponent(subject)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -230,31 +241,57 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={onSubmit} className="flex gap-2 flex-wrap items-start">
-        <textarea
-          className="flex-1 border border-slate-300 rounded-md px-3 py-2 min-h-[96px] resize-y focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          placeholder="Ask a question..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          rows={3}
-        />
-        <Button
-          type="submit"
-          loading={loading}
-          disabled={loading || !query.trim()}
-        >
-          {loading ? "Running…" : "Run"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={loading}
-          onClick={async () => {
-            await generateRandomQuery();
-          }}
-        >
-          Random
-        </Button>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="flex gap-4 items-start">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Search Query
+            </label>
+            <textarea
+              className="w-full border border-slate-300 rounded-md px-3 py-2 min-h-[96px] resize-y focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="Ask a question..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <div className="w-64">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Subject Area
+            </label>
+            <select
+              className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            >
+              {SUBJECTS.map((subj) => (
+                <option key={subj} value={subj}>
+                  {subj}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            loading={loading}
+            disabled={loading || !query.trim()}
+          >
+            {loading ? "Running…" : "Run Search"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={async () => {
+              await generateRandomQuery();
+            }}
+          >
+            Random Query
+          </Button>
+        </div>
       </form>
 
       {loading && (

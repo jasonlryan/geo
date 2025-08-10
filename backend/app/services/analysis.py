@@ -33,6 +33,7 @@ def compute_analysis(bundle: Dict[str, Any]) -> Dict[str, Any]:
     # Mix counters
     domains = [s.get("domain") for s in sources if s.get("domain")]
     media_types = [s.get("media_type") for s in sources if s.get("media_type")]
+    source_categories = [s.get("category") for s in sources if s.get("category")]
     cred_bands = []
     for s in sources:
         cred = (s.get("credibility") or {}).get("score")
@@ -43,6 +44,7 @@ def compute_analysis(bundle: Dict[str, Any]) -> Dict[str, Any]:
     mix = {
         "domains_top": Counter(domains).most_common(10),
         "media_type": Counter(media_types),
+        "source_category": Counter(source_categories),
         "credibility_band": Counter(cred_bands),
     }
 

@@ -574,6 +574,12 @@ video {
 .mt-6 {
   margin-top: 1.5rem;
 }
+.ml-auto {
+  margin-left: auto;
+}
+.block {
+  display: block;
+}
 .inline {
   display: inline;
 }
@@ -645,6 +651,9 @@ video {
 }
 .w-full {
   width: 100%;
+}
+.w-64 {
+  width: 16rem;
 }
 .min-w-full {
   min-width: 100%;

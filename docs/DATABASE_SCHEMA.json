@@ -1,0 +1,256 @@
+{
+  "schema_version": "1.0",
+  "redis_namespace": "ai_search:v1",
+  "description": "AI Search Intelligence Redis Schema - Actual Current Implementation",
+  "storage_strategy": "permanent_no_ttl",
+  
+  "entities": {
+    "SearchBundle": {
+      "description": "Complete search run data stored as single Redis key",
+      "redis_key_pattern": "ai_search:v1:{run_id}",
+      "ttl": null,
+      "structure": {
+        "run": { "$ref": "#/entities/SearchRun" },
+        "sources": { "type": "array", "items": { "$ref": "#/entities/Source" } },
+        "claims": { "type": "array", "items": { "$ref": "#/entities/Claim" } },
+        "evidence": { "type": "array", "items": { "$ref": "#/entities/Evidence" } },
+        "classifications": { "type": "array", "items": { "$ref": "#/entities/Classification" } },
+        "answer": { "$ref": "#/entities/Answer" },
+        "provider_results": { "type": "array", "items": { "$ref": "#/entities/ProviderResult" } },
+        "fetched_docs": { "type": "array", "items": { "$ref": "#/entities/FetchedDoc" } }
+      }
+    },
+    
+    "SearchRun": {
+      "description": "Search execution metadata",
+      "required": ["run_id", "query", "subject", "created_at", "search_model"],
+      "properties": {
+        "run_id": { "type": "string", "format": "uuid" },
+        "query": { "type": "string", "description": "Original user query" },
+        "subject": { "type": "string", "description": "Subject area classification" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "search_model": { "type": "string", "description": "Search provider used" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "filters": { "type": "object" },
+            "force": { "type": "boolean" }
+          }
+        },
+        "timings": {
+          "type": "object",
+          "properties": {
+            "total_ms": { "type": "number" },
+            "search_ms": { "type": "number" },
+            "fetch_ms": { "type": "number" },
+            "compose_ms": { "type": "number" },
+            "analysis_ms": { "type": "number" }
+          }
+        }
+      }
+    },
+    
+    "Source": {
+      "description": "Individual source document with metadata",
+      "required": ["source_id", "run_id", "url", "domain"],
+      "properties": {
+        "source_id": { "type": "string", "pattern": "^src_[0-9]{2}_[a-f0-9]{8}$" },
+        "run_id": { "type": "string", "format": "uuid" },
+        "url": { "type": "string", "format": "uri" },
+        "canonical_url": { "type": "string", "format": "uri" },
+        "domain": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "publisher": { "type": "string" },
+        "published_at": { "type": "string", "format": "date-time" },
+        "accessed_at": { "type": "string", "format": "date-time" },
+        "media_type": { "type": "string" },
+        "geography": { "type": "string" },
+        "paywall": { "type": "boolean" },
+        "credibility": {
+          "type": "object",
+          "required": ["score"],
+          "properties": {
+            "score": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+          }
+        },
+        "content_hash": { "type": "string" },
+        "word_count": { "type": "integer", "minimum": 0 },
+        "raw_text": { "type": "string" },
+        "category": { 
+          "type": "string", 
+          "enum": ["gov", "edu", "research", "consultancy", "agency", "news", "financial", "legal", "nonprofit", "corporate", "social", "blog"]
+        }
+      }
+    },
+    
+    "Claim": {
+      "description": "Individual claim extracted from answer",
+      "required": ["claim_id", "text", "answer_sentence_index"],
+      "properties": {
+        "claim_id": { "type": "string" },
+        "text": { "type": "string" },
+        "answer_sentence_index": { "type": "integer", "minimum": 0 },
+        "confidence_score": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "topic": { "type": "string" }
+      }
+    },
+    
+    "Evidence": {
+      "description": "Citation link between claim and source",
+      "required": ["claim_id", "source_id", "coverage_score", "stance"],
+      "properties": {
+        "claim_id": { "type": "string" },
+        "source_id": { "type": "string" },
+        "coverage_score": { "type": "number" },
+        "stance": { "type": "string" },
+        "snippet": { "type": "string" },
+        "start_offset": { "type": "integer", "minimum": 0 },
+        "end_offset": { "type": "integer", "minimum": 0 }
+      }
+    },
+    
+    "Classification": {
+      "description": "Source classification metadata",
+      "required": ["source_id", "label_key"],
+      "properties": {
+        "source_id": { "type": "string" },
+        "label_key": { "type": "string" },
+        "label_value": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    },
+    
+    "Answer": {
+      "description": "Generated answer text",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" }
+      }
+    },
+    
+    "ProviderResult": {
+      "description": "Raw search provider results",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "score": { "type": "number" },
+        "published_date": { "type": "string" }
+      }
+    },
+    
+    "FetchedDoc": {
+      "description": "Successfully fetched document content",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    }
+  },
+  
+  "intelligence_analysis": {
+    "LLMAnalysis": {
+      "description": "Stored intelligence report with metadata",
+      "redis_key_pattern": "ai_search:v1:analysis:{run_id}",
+      "ttl": null,
+      "structure": {
+        "ai_search_intelligence": {
+          "type": "object",
+          "description": "Core LLM analysis response from citation_analysis.md prompt"
+        },
+        "metadata": {
+          "type": "object",
+          "required": ["run_id", "query", "search_model", "created_at", "generated_at"],
+          "properties": {
+            "run_id": { "type": "string", "format": "uuid" },
+            "query": { "type": "string" },
+            "search_model": { "type": "string" },
+            "created_at": { "type": "string", "format": "date-time" },
+            "generated_at": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    }
+  },
+  
+  "indices": {
+    "RecentRuns": {
+      "description": "Time-ordered index of all search runs",
+      "redis_key": "ai_search:v1:recent",
+      "redis_type": "zset",
+      "score": "timestamp",
+      "member": "run_id",
+      "ttl": null
+    },
+    
+    "IntelligenceReports": {
+      "description": "Time-ordered index of runs with intelligence reports",
+      "redis_key": "ai_search:v1:reports",
+      "redis_type": "zset", 
+      "score": "report_generation_timestamp",
+      "member": "run_id",
+      "ttl": null
+    },
+    
+    "QueryHistory": {
+      "description": "Query-specific run history",
+      "redis_key_pattern": "ai_search:v1:q:{query_hash}",
+      "redis_type": "list",
+      "values": "run_id",
+      "ttl": "90 days"
+    },
+    
+    "QueryDeduplication": {
+      "description": "Short-term query deduplication",
+      "redis_key_pattern": "ai_search:v1:query_hash:{hash}",
+      "redis_type": "string",
+      "value": "run_id",
+      "ttl": "30 minutes"
+    }
+  },
+  
+  "data_analysis": {
+    "intelligence_coverage": {
+      "core_data_available": true,
+      "source_categorization": true,
+      "authority_signals": true,
+      "subject_filtering": true,
+      "permanent_storage": true,
+      "readiness_percentage": 95
+    },
+    
+    "missing_enhancements": [
+      "funnel_metrics",
+      "authority_classification", 
+      "recency_classification",
+      "provider_ranking_preservation"
+    ],
+    
+    "recommended_additions": {
+      "analysis_metrics": {
+        "description": "Add computed analysis to search bundle",
+        "implementation": "compute_analysis() in store.py:create_run()",
+        "priority": "high"
+      },
+      "source_enhancements": {
+        "authority_level": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "based_on": "credibility.score"
+        },
+        "recency_category": {
+          "type": "string", 
+          "enum": ["recent", "medium", "stale"],
+          "based_on": "published_at"
+        },
+        "provider_rank": {
+          "type": "integer",
+          "description": "Original ranking from search provider"
+        }
+      }
+    }
+  }
+}

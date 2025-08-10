@@ -24,6 +24,7 @@ def get_openai_client():
 
 class SearchRequest(BaseModel):
     query: str
+    subject: str | None = "Executive Search"
     filters: dict | None = None
     force: bool | None = False
 
@@ -91,6 +92,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
             "run": {
                 "run_id": run_id,
                 "query": body.query,
+                "subject": body.subject or "Executive Search",
                 "created_at": now_iso,
                 "params": body.filters or {},
                 "timings": {"total_ms": 0},
@@ -142,6 +144,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
             "run": {
                 "run_id": run_id,
                 "query": body.query,
+                "subject": body.subject or "Executive Search",
                 "created_at": now_iso,
                 "params": body.filters or {},
                 "timings": {"total_ms": 0},
@@ -172,23 +175,44 @@ def load_random_query_prompt():
     return content
 
 
+def get_subject_context(subject: str) -> str:
+    """Get domain-specific context for random query generation."""
+    subject_contexts = {
+        "Executive Search": "executive search, leadership development, organizational consulting, talent management, or succession planning",
+        "Technology Leadership": "technology leadership, CTO hiring, digital transformation, tech talent acquisition, or engineering management",
+        "Healthcare Executive": "healthcare leadership, hospital administration, medical executive search, healthcare governance, or clinical management",
+        "Financial Services": "financial services leadership, banking executives, investment management, fintech leadership, or regulatory compliance",
+        "Manufacturing": "manufacturing leadership, operations management, supply chain executives, industrial management, or lean manufacturing",
+        "Nonprofit Leadership": "nonprofit leadership, board governance, fundraising executives, mission-driven organizations, or social impact leadership",
+        "Startup Growth": "startup leadership, venture-backed companies, scaling organizations, founder transitions, or growth management"
+    }
+    return subject_contexts.get(subject, subject_contexts["Executive Search"])
+
+
 @router.get("/random-query")
-async def get_random_query():
-    """Generate a random query using OpenAI focused on executive search, leadership, and organizational consulting."""
+async def get_random_query(subject: str = "Executive Search"):
+    """Generate a random query using OpenAI based on the specified subject."""
     try:
         client = get_openai_client()
         system_prompt = load_random_query_prompt()
+        
+        # Make the prompt dynamic based on subject
+        subject_context = get_subject_context(subject)
+        dynamic_prompt = system_prompt.replace(
+            "executive search, leadership development, organizational consulting, talent management, or succession planning",
+            subject_context
+        )
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system", 
-                    "content": system_prompt
+                    "content": dynamic_prompt
                 },
                 {
                     "role": "user", 
-                    "content": "Generate one random query"
+                    "content": f"Generate one random query about {subject}"
                 }
             ],
             max_tokens=100,

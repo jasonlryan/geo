@@ -26,6 +26,7 @@ interface AggregateData {
     avg_citation_rate: number;
   };
   domains_top: [string, number][];
+  source_categories: Record<string, number>;
 }
 
 export default function MainInsightsPanel() {
@@ -34,18 +35,32 @@ export default function MainInsightsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [agg, setAgg] = useState<AggregateData | null>(null);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [activeSection, setActiveSection] = useState<"overview" | "reports" | "analysis">("overview");
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [selectedSubject]);
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
+      // Load available subjects
+      const subjectsRes = await fetch(`${apiBaseUrl}/api/insights/subjects`);
+      const subjectsJson = await subjectsRes.json();
+      setSubjects(subjectsJson.subjects || []);
+
       // Load recent runs
-      const recentRes = await fetch(`${apiBaseUrl}/api/insights/recent`);
+      const recentUrl = selectedSubject && selectedSubject.trim() 
+        ? `${apiBaseUrl}/api/insights/recent?subject=${encodeURIComponent(selectedSubject)}`
+        : `${apiBaseUrl}/api/insights/recent`;
+      const recentRes = await fetch(recentUrl);
       const recentJson = await recentRes.json();
       setRecent(recentJson.items || []);
 
@@ -55,7 +70,10 @@ export default function MainInsightsPanel() {
       setReports(reportsJson.reports || []);
 
       // Load aggregate data
-      const aggRes = await fetch(`${apiBaseUrl}/api/insights/aggregate`);
+      const aggUrl = selectedSubject && selectedSubject.trim()
+        ? `${apiBaseUrl}/api/insights/aggregate?subject=${encodeURIComponent(selectedSubject)}`
+        : `${apiBaseUrl}/api/insights/aggregate`;
+      const aggRes = await fetch(aggUrl);
       const aggJson = await aggRes.json();
       setAgg(aggJson);
     } catch (e: any) {
@@ -89,7 +107,7 @@ export default function MainInsightsPanel() {
   return (
     <div className="space-y-6">
       {/* Navigation */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center flex-wrap">
         <Button
           variant={activeSection === "overview" ? "solid" : "outline"}
           size="sm"
@@ -111,6 +129,25 @@ export default function MainInsightsPanel() {
         >
           Analysis
         </Button>
+        
+        {/* Subject Filter */}
+        {subjects.length > 0 && (
+          <div className="ml-auto flex items-center gap-2">
+            <label className="text-sm text-slate-600">Subject:</label>
+            <select
+              className="border border-slate-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+            >
+              <option value="">All Subjects</option>
+              {subjects.map((subject) => (
+                <option key={subject} value={subject}>
+                  {subject}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Overview Section */}
@@ -150,10 +187,30 @@ export default function MainInsightsPanel() {
             </CardBody>
           </Card>
 
-          {agg && agg.domains_top.length > 0 && (
+          {agg && agg.source_categories && Object.keys(agg.source_categories).length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Top Cited Domains</CardTitle>
+                <CardTitle>Cited Source Categories</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-2">
+                  {Object.entries(agg.source_categories)
+                    .sort(([,a], [,b]) => b - a)
+                    .map(([category, count]) => (
+                      <div key={category} className="flex justify-between items-center py-1">
+                        <span className="font-medium capitalize">{category.replace('_', ' ')}</span>
+                        <span className="bg-slate-100 px-2 py-1 rounded text-sm">{count}</span>
+                      </div>
+                    ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {selectedSubject && agg && agg.domains_top.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Cited Domains ({selectedSubject})</CardTitle>
               </CardHeader>
               <CardBody>
                 <div className="space-y-2">

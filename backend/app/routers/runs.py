@@ -211,11 +211,22 @@ def debug_redis_keys():
 
 
 @router.get("/insights/recent")
-def insights_recent(limit: int = 20):
+def insights_recent(limit: int = 20, subject: str = None):
     """Return recent run_ids with timestamps from the versioned ZSET."""
     key = CACHE.ai_key("recent")
     items = CACHE.zrevrange_withscores(key, 0, max(0, limit - 1))
-    return {"items": [{"run_id": m, "ts": s} for m, s in items]}
+    
+    # Filter by subject if provided
+    filtered_items = []
+    for run_id, ts in items:
+        if subject:
+            bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+            if bundle and bundle.get("run", {}).get("subject") == subject:
+                filtered_items.append({"run_id": run_id, "ts": ts})
+        else:
+            filtered_items.append({"run_id": run_id, "ts": ts})
+    
+    return {"items": filtered_items}
 
 
 @router.get("/insights/query/{qhash}")
@@ -253,48 +264,79 @@ def insights_reports(limit: int = 20):
         return {"reports": [], "error": str(e)}
 
 
+@router.get("/insights/subjects")
+def insights_subjects():
+    """Return available subjects from stored runs."""
+    recent = CACHE.zrevrange_withscores(CACHE.ai_key("recent"), 0, -1)
+    run_ids = [m for m, _ in recent]
+    subjects = set()
+    
+    for run_id in run_ids:
+        bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+        if bundle:
+            subject = bundle.get("run", {}).get("subject")
+            if subject:
+                subjects.add(subject)
+    
+    return {"subjects": sorted(list(subjects))}
+
+
 @router.get("/insights/aggregate")
-def insights_aggregate(limit: int = 50):
+def insights_aggregate(limit: int = 50, subject: str = None):
     """Aggregate patterns across recent runs from Redis bundles.
 
     Returns:
         - runs: number of runs included
         - totals: total_sources, total_cited_sources, avg_citation_rate
         - domains_top: list[[domain, citations]] sorted desc
+        - source_categories: dict[category, count] of cited sources by category
     """
     recent = CACHE.zrevrange_withscores(CACHE.ai_key("recent"), 0, max(0, limit - 1))
     run_ids = [m for m, _ in recent]
     total_sources = 0
     total_cited_sources = 0
     domain_citations: dict[str, int] = {}
+    category_citations: dict[str, int] = {}
     runs_counted = 0
 
     for run_id in run_ids:
         bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
         if not bundle:
             continue
+        
+        # Filter by subject if provided
+        if subject:
+            bundle_subject = bundle.get("run", {}).get("subject")
+            if bundle_subject != subject:
+                continue
+        
         runs_counted += 1
         sources = bundle.get("sources", [])
         evidence = bundle.get("evidence", [])
         total_sources += len(sources)
         cited_ids = {e.get("source_id") for e in evidence if e.get("source_id")}
         total_cited_sources += len(cited_ids)
-        # Count domains for cited sources only
+        # Count domains and categories for cited sources only
         src_by_id = {s.get("source_id"): s for s in sources}
         for sid in cited_ids:
             s = src_by_id.get(sid)
             if not s:
                 continue
+            # Domain counting
             domain = (s.get("domain") or "").lower()
-            if not domain:
-                continue
-            domain_citations[domain] = domain_citations.get(domain, 0) + 1
+            if domain:
+                domain_citations[domain] = domain_citations.get(domain, 0) + 1
+            
+            # Category counting
+            category = s.get("category", "web")
+            category_citations[category] = category_citations.get(category, 0) + 1
 
     avg_citation_rate = 0.0
     if total_sources > 0:
         avg_citation_rate = (total_cited_sources / total_sources) if runs_counted > 0 else 0.0
 
     domains_top = sorted(domain_citations.items(), key=lambda x: x[1], reverse=True)[:20]
+    categories_sorted = sorted(category_citations.items(), key=lambda x: x[1], reverse=True)
 
     return {
         "runs": runs_counted,
@@ -304,6 +346,7 @@ def insights_aggregate(limit: int = 50):
             "avg_citation_rate": round(avg_citation_rate, 4),
         },
         "domains_top": domains_top,
+        "source_categories": dict(categories_sorted),
     }
 
 
