@@ -36,6 +36,565 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
     URL.revokeObjectURL(url);
   };
 
+  const generatePDF = async () => {
+    if (!analysisData) return;
+    
+    try {
+      // Use browser's print to PDF functionality
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      // Generate the report content as clean HTML
+      const reportTitle = `AI Search Intelligence Report - ${bundle.run?.subject || 'Analysis'}`;
+      const reportDate = new Date().toLocaleDateString();
+      const query = bundle.run?.query || '';
+      const subject = bundle.run?.subject || 'Not specified';
+      
+      // Calculate key metrics
+      const sourceCount = bundle.sources?.length || 0;
+      const citedCount = bundle.evidence?.length || 0;
+      const citationRate = sourceCount > 0 ? Math.round((citedCount / sourceCount) * 100) : 0;
+      const uniquePublishers = new Set(bundle.sources?.map((s: any) => s.domain) || []).size;
+
+      // Get cited sources
+      const citedSourceIds = new Set(bundle.evidence?.map((e: any) => e.source_id) || []);
+      const citedSources = bundle.sources?.filter((s: any) => citedSourceIds.has(s.source_id)) || [];
+
+      // Source categorization for insights
+      const categorizeSource = (domain: string) => {
+        const d = domain.toLowerCase();
+        if (d.includes(".gov") || d.includes(".mil")) return "Government";
+        if (d.includes(".edu") || d.includes("university") || d.includes("college")) return "Academic";
+        if (d.includes("mckinsey") || d.includes("bcg") || d.includes("bain")) return "Management Consulting";
+        if (d.includes("kornferry") || d.includes("russell") || d.includes("egon")) return "Executive Search";
+        if (d.includes("forbes") || d.includes("fortune") || d.includes("hbr.org")) return "Business Media";
+        if (d.includes("reuters") || d.includes("bloomberg") || d.includes("wsj")) return "Financial News";
+        if (d.includes("techcrunch") || d.includes("wired") || d.includes("theverge")) return "Tech Media";
+        return "Corporate Websites";
+      };
+
+      const sourceCategories = bundle.sources?.reduce((acc: any, source: any) => {
+        const category = categorizeSource(source.domain);
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      const topCategory = Object.entries(sourceCategories).sort(([,a], [,b]) => (b as number) - (a as number))[0];
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${reportTitle}</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; 
+            margin: 40px; 
+            line-height: 1.6; 
+            color: #1f2937;
+            background: white;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 40px; 
+            padding-bottom: 20px; 
+            border-bottom: 3px solid #3b82f6;
+        }
+        .header h1 { 
+            color: #1e40af; 
+            margin: 0 0 10px 0; 
+            font-size: 28px;
+        }
+        .header .date { 
+            color: #6b7280; 
+            font-size: 14px;
+        }
+        .context-box {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .context-box h3 {
+            color: #0f172a;
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .kpi-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; 
+            margin: 20px 0;
+        }
+        .kpi-card { 
+            background: #f1f5f9; 
+            padding: 20px; 
+            text-align: center; 
+            border-radius: 8px;
+            border: 2px solid #cbd5e1;
+        }
+        .kpi-value { 
+            font-size: 32px; 
+            font-weight: bold; 
+            margin: 10px 0;
+        }
+        .kpi-label { 
+            color: #64748b; 
+            font-size: 14px;
+        }
+        .blue { color: #3b82f6; }
+        .green { color: #10b981; }
+        .orange { color: #f59e0b; }
+        .purple { color: #8b5cf6; }
+        .section { 
+            margin: 30px 0; 
+            page-break-inside: avoid;
+        }
+        .section h2 { 
+            color: #1e40af; 
+            border-bottom: 2px solid #3b82f6; 
+            padding-bottom: 10px;
+            font-size: 20px;
+        }
+        .citation-list { 
+            background: #fef7e3; 
+            border: 2px solid #fbbf24; 
+            border-radius: 8px; 
+            padding: 20px;
+        }
+        .citation-item { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: white; 
+            border-radius: 6px;
+            border: 1px solid #fbbf24;
+        }
+        .citation-title { 
+            font-weight: bold; 
+            color: #92400e;
+            margin-bottom: 5px;
+        }
+        .citation-domain { 
+            color: #d97706; 
+            font-size: 12px;
+        }
+        .insight-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .insight-card {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .insight-card h4 {
+            color: #166534;
+            margin-top: 0;
+            font-size: 16px;
+        }
+        .category-breakdown {
+            background: #fdf2f8;
+            border: 2px solid #f9a8d4;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #f9a8d4;
+        }
+        .category-name {
+            font-weight: 500;
+            color: #be185d;
+        }
+        .category-count {
+            background: #be185d;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .action-plan {
+            background: #eff6ff;
+            border: 2px solid #93c5fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .action-item {
+            background: white;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+        }
+        .action-title {
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 5px;
+        }
+        .action-desc {
+            color: #1e40af;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .action-meta {
+            color: #3b82f6;
+            font-size: 12px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .risk-card {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .opportunity-card {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .priority-box {
+            background: #eff6ff;
+            border: 2px solid #60a5fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        ul { list-style-type: disc; margin-left: 20px; }
+        li { margin: 8px 0; }
+        @page { 
+            margin: 1in; 
+            @bottom-center { 
+                content: "AI Search Intelligence Report - Page " counter(page);
+                font-size: 10px;
+                color: #6b7280;
+            }
+        }
+        @media print {
+            body { margin: 0; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .insight-grid { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${reportTitle}</h1>
+        <div class="date">Generated ${reportDate}</div>
+    </div>
+
+    <div class="context-box">
+        <h3>Intelligence Report Context</h3>
+        <div><strong>Subject:</strong> ${subject}</div>
+        <div><strong>Query:</strong> ${query}</div>
+        <div><strong>AI Search Funnel:</strong> ${sourceCount} sources → ${citedCount} cited (${citationRate}% rate)</div>
+    </div>
+
+    <div class="section">
+        <h2>Performance Overview</h2>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-value blue">${sourceCount}</div>
+                <div class="kpi-label">Sources AI Found</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value green">${uniquePublishers}</div>
+                <div class="kpi-label">Unique Publishers</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value orange">${citedCount}</div>
+                <div class="kpi-label">Sources Cited</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value purple">${citationRate}%</div>
+                <div class="kpi-label">Citation Rate</div>
+            </div>
+        </div>
+    </div>
+
+    ${citedSources.length > 0 ? `
+    <div class="section">
+        <h2>Who Actually Gets Cited?</h2>
+        <div class="citation-list">
+            ${citedSources.slice(0, 8).map((source: any, i: number) => {
+              const citationCount = bundle.evidence?.filter((e: any) => e.source_id === source.source_id).length || 0;
+              return `
+                <div class="citation-item">
+                    <div class="citation-title">#${i + 1}: ${source.title || source.url}</div>
+                    <div class="citation-domain">${source.domain} • ${citationCount} citation${citationCount !== 1 ? 's' : ''}</div>
+                </div>
+              `;
+            }).join('')}
+        </div>
+    </div>
+    ` : ''}
+
+    ${Object.keys(sourceCategories).length > 0 ? `
+    <div class="section">
+        <h2>Source Type Analysis</h2>
+        <div class="category-breakdown">
+            <h4>Citation Authority Breakdown</h4>
+            ${Object.entries(sourceCategories)
+              .sort(([,a], [,b]) => (b as number) - (a as number))
+              .slice(0, 8)
+              .map(([category, count]) => {
+                const percentage = Math.round(((count as number) / sourceCount) * 100);
+                return `
+                  <div class="category-item">
+                      <span class="category-name">${category}</span>
+                      <span class="category-count">${count} (${percentage}%)</span>
+                  </div>
+                `;
+              }).join('')}
+            ${topCategory ? `
+            <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 6px;">
+                <strong>💡 Marketing Insight:</strong> 
+                ${(() => {
+                  const topCategoryName = topCategory[0];
+                  const topCategoryPercent = Math.round(((topCategory[1] as number) / sourceCount) * 100);
+                  
+                  if (topCategoryName === "Government" || topCategoryName === "Academic") {
+                    return `${topCategoryPercent}% authoritative sources - build credibility through official partnerships`;
+                  } else if (topCategoryName === "Management Consulting" || topCategoryName === "Executive Search") {
+                    return `${topCategoryPercent}% from consulting - establish thought leadership in your industry`;
+                  } else if (topCategoryName === "Business Media" || topCategoryName === "Financial News") {
+                    return `${topCategoryPercent}% media coverage - focus on newsworthy content and PR`;
+                  } else {
+                    return `Diverse mix across ${Object.keys(sourceCategories).length} categories - multi-channel content strategy needed`;
+                  }
+                })()}
+            </div>
+            ` : ''}
+        </div>
+    </div>
+    ` : ''}
+
+    <div class="section">
+        <h2>Strategic Intelligence & Action Plan</h2>
+        <div class="insight-grid">
+            <div class="insight-card">
+                <h4>💡 Content Gap Analysis</h4>
+                ${sourceCount === 0 ? `
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 6px;">
+                        <strong>🚀 First-Mover Opportunity</strong><br>
+                        No strong sources found - potential to be the authoritative voice on this topic
+                    </div>
+                ` : `
+                    <div style="background: #d1fae5; padding: 15px; border-radius: 6px;">
+                        <strong>Competition Level: ${sourceCount < 3 ? "LOW 🟢" : sourceCount < 8 ? "MEDIUM 🟡" : "HIGH 🔴"}</strong><br>
+                        ${sourceCount < 3 ? "Excellent opportunity to dominate with quality content" : 
+                          sourceCount < 8 ? "Moderate competition - focus on unique angles" : 
+                          "Saturated space - need exceptional content to compete"}
+                    </div>
+                `}
+                <div style="margin-top: 10px;">
+                    <strong>Publisher Diversity:</strong> ${uniquePublishers} unique domains publishing on this topic
+                </div>
+            </div>
+            <div class="insight-card">
+                <h4>📝 Format Recommendations</h4>
+                <ul>
+                    <li>Comprehensive Guides - <strong>High Impact</strong></li>
+                    <li>Data Analysis - <strong>High Impact</strong></li>
+                    <li>Case Studies - <strong>Medium Impact</strong></li>
+                    <li>Industry Reports - <strong>Medium Impact</strong></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="action-plan">
+            <h4 style="color: #1e40af; margin-top: 0;">🎯 This Quarter's Priorities</h4>
+            ${sourceCount === 0 ? `
+                <div class="action-item">
+                    <div class="action-title">1. Create Foundational Content</div>
+                    <div class="action-desc">Be the first authoritative source on this topic</div>
+                    <div class="action-meta">Priority: HIGH • Timeline: 4-6 weeks</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-title">2. Optimize for AI Discovery</div>
+                    <div class="action-desc">Structure content for AI comprehension</div>
+                    <div class="action-meta">Priority: HIGH • Timeline: 2-3 weeks</div>
+                </div>
+            ` : sourceCount < 5 ? `
+                <div class="action-item">
+                    <div class="action-title">1. Competitive Analysis</div>
+                    <div class="action-desc">Study top-ranking content gaps</div>
+                    <div class="action-meta">Priority: HIGH • Timeline: 1-2 weeks</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-title">2. Create Superior Content</div>
+                    <div class="action-desc">Outperform existing sources</div>
+                    <div class="action-meta">Priority: HIGH • Timeline: 4-8 weeks</div>
+                </div>
+            ` : `
+                <div class="action-item">
+                    <div class="action-title">1. Find Unique Angles</div>
+                    <div class="action-desc">Highly competitive - need differentiation</div>
+                    <div class="action-meta">Priority: HIGH • Timeline: 2-3 weeks</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-title">2. Partner Strategy</div>
+                    <div class="action-desc">Collaborate with authority domains</div>
+                    <div class="action-meta">Priority: MEDIUM • Timeline: 6-12 weeks</div>
+                </div>
+            `}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Strategic Summary</h2>
+        <div class="summary-grid">
+            <div class="risk-card">
+                <h4 style="color: #dc2626; margin-top: 0;">⚠️ Content Strategy Risks</h4>
+                <ul style="color: #dc2626;">
+                    ${(() => {
+                      const risks = [];
+                      if (sourceCount === 0) {
+                        risks.push("No AI citations found - you're invisible in AI search");
+                        risks.push("First-mover advantage available but requires immediate action");
+                      } else if (sourceCount < 3) {
+                        risks.push("Very low competition - window may close quickly");
+                        risks.push("Limited examples to learn from - higher execution risk");
+                      } else if (sourceCount > 15) {
+                        risks.push("Highly saturated market - difficult to break through");
+                        risks.push("Established players dominate - need exceptional differentiation");
+                      } else {
+                        risks.push("Moderate competition with good opportunities");
+                      }
+                      
+                      if (citationRate < 30) {
+                        risks.push("Low citation rate suggests content quality issues");
+                      }
+                      
+                      return risks.slice(0, 4).map(risk => `<li>${risk}</li>`).join('');
+                    })()}
+                </ul>
+            </div>
+            <div class="opportunity-card">
+                <h4 style="color: #059669; margin-top: 0;">💡 Strategic Opportunities</h4>
+                <ul style="color: #059669;">
+                    ${(() => {
+                      const opportunities = [];
+                      if (sourceCount === 0) {
+                        opportunities.push("Blue ocean opportunity - be the first authoritative voice");
+                        opportunities.push("Define the conversation and set industry standards");
+                      } else if (sourceCount < 5) {
+                        opportunities.push("Low competition - excellent opportunity to dominate");
+                        opportunities.push("High potential for thought leadership positioning");
+                      } else {
+                        opportunities.push("Balanced competitive landscape with room for growth");
+                      }
+                      
+                      if (!sourceCategories.Government && !sourceCategories.Academic) {
+                        opportunities.push("No government/academic sources - partner opportunity");
+                      }
+                      
+                      if (uniquePublishers > 5) {
+                        opportunities.push("Diverse landscape - multiple partnership options");
+                      }
+                      
+                      return opportunities.slice(0, 4).map(opp => `<li>${opp}</li>`).join('');
+                    })()}
+                </ul>
+            </div>
+        </div>
+
+        <div class="priority-box">
+            <strong>🚀 Immediate Priority:</strong> 
+            ${sourceCount === 0 
+              ? "Create foundational content immediately - first-mover advantage available"
+              : sourceCount < 5
+                ? "Scale content production while competition is low"
+                : sourceCount > 15
+                  ? "Focus on unique angles and exceptional quality to break through"
+                  : "Build consistent content presence and establish thought leadership"}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Complete Source Analysis</h2>
+        <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 20px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                        <th style="padding: 8px; text-align: left; border-right: 1px solid #cbd5e1;">#</th>
+                        <th style="padding: 8px; text-align: left; border-right: 1px solid #cbd5e1;">Title</th>
+                        <th style="padding: 8px; text-align: left; border-right: 1px solid #cbd5e1;">Domain</th>
+                        <th style="padding: 8px; text-align: left; border-right: 1px solid #cbd5e1;">Type</th>
+                        <th style="padding: 8px; text-align: left;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(bundle.sources || []).slice(0, 20).map((s: any, i: number) => {
+                      const isCited = citedSourceIds.has(s.source_id);
+                      return `
+                        <tr style="border-bottom: 1px solid #e2e8f0; ${isCited ? 'background: #f0fdf4;' : ''}">
+                            <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${i + 1}</td>
+                            <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${(s.title || s.url).substring(0, 60)}${(s.title || s.url).length > 60 ? '...' : ''}</td>
+                            <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${s.domain}</td>
+                            <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${categorizeSource(s.domain)}</td>
+                            <td style="padding: 8px; color: ${isCited ? '#059669' : '#dc2626'}; font-weight: bold;">
+                                ${isCited ? '✅ CITED' : '❌ NOT CITED'}
+                            </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                    ${bundle.sources?.length > 20 ? `
+                    <tr>
+                        <td colspan="5" style="padding: 8px; text-align: center; font-style: italic; color: #6b7280;">
+                            + ${bundle.sources.length - 20} more sources not shown
+                        </td>
+                    </tr>
+                    ` : ''}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="margin-top: 40px; padding: 20px; background: #f8fafc; border-radius: 8px; text-align: center;">
+        <div style="color: #6b7280; font-size: 12px;">
+            This AI Search Intelligence Report was generated by analyzing real AI search behavior patterns.<br>
+            Use this data to optimize your content strategy for maximum AI visibility and citation rates.
+        </div>
+    </div>
+</body>
+</html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Wait for content to load, then trigger print dialog
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      };
+
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
   const proposed = (bundle as any).provider_results || [];
   const fetched = (bundle as any).fetched_docs || [];
 
@@ -59,15 +618,27 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
     return (
       <div className="space-y-6">
-        {/* Query context - compact */}
+        {/* Query and Subject Header */}
         <Card>
+          <CardHeader>
+            <CardTitle>Intelligence Report Context</CardTitle>
+          </CardHeader>
           <CardBody>
-            <div className="text-xs text-blue-800">
-              <strong>Query:</strong> {bundle.run?.query} |{" "}
-              <strong>AI Search Funnel:</strong>{" "}
-              {bundle.analysis?.funnel?.proposed ?? 0} proposed →{" "}
-              {bundle.analysis?.funnel?.fetched ?? 0} fetched →{" "}
-              {bundle.analysis?.funnel?.cited ?? 0} cited
+            <div className="space-y-2">
+              <div className="text-lg font-medium text-slate-900">
+                <strong>Subject:</strong> {bundle.run?.subject || "Not specified"}
+              </div>
+              <div className="text-base text-slate-700">
+                <strong>Query:</strong> {bundle.run?.query}
+              </div>
+              <div className="text-sm text-blue-700 mt-3 pt-3 border-t">
+                <strong>AI Search Funnel:</strong>{" "}
+                <span className="font-mono">
+                  {bundle.analysis?.funnel?.proposed ?? 0} proposed →{" "}
+                  {bundle.analysis?.funnel?.fetched ?? 0} fetched →{" "}
+                  {bundle.analysis?.funnel?.cited ?? 0} cited
+                </span>
+              </div>
             </div>
           </CardBody>
         </Card>
@@ -125,40 +696,32 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                             citedSourceIds.has(s.source_id)
                           ) || [];
 
-                        return Array.from(
-                          new Set(citedSources.map((s: any) => s.domain))
-                        )
-                          .slice(0, 5)
-                          .map((domain: string, i: number) => {
-                            const domainSources = citedSources.filter(
-                              (s: any) => s.domain === domain
-                            );
+                        // Show individual sources, not grouped by domain
+                        return citedSources
+                          .slice(0, 10) 
+                          .map((source: any, i: number) => {
                             const citationCount =
                               bundle.evidence?.filter((e: any) =>
-                                domainSources.some(
-                                  (ds: any) => ds.source_id === e.source_id
-                                )
+                                e.source_id === source.source_id
                               ).length || 0;
 
                             return (
                               <div
-                                key={i}
-                                className="flex justify-between items-center py-2 border-b border-orange-100 last:border-b-0"
+                                key={source.source_id}
+                                className="py-2 border-b border-orange-100 last:border-b-0"
                               >
-                                <div>
-                                  <div className="font-medium text-orange-900">
-                                    {domain}
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-orange-900 text-sm line-clamp-2" title={source.title}>
+                                      {source.title}
+                                    </div>
+                                    <div className="text-xs text-orange-600 mt-1">
+                                      {source.domain} • {citationCount} citation{citationCount !== 1 ? "s" : ""}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-orange-600">
-                                    {domainSources.length} source
-                                    {domainSources.length !== 1
-                                      ? "s"
-                                      : ""} • {citationCount} citation
-                                    {citationCount !== 1 ? "s" : ""}
+                                  <div className="text-lg font-bold text-orange-500 flex-shrink-0">
+                                    #{i + 1}
                                   </div>
-                                </div>
-                                <div className="text-sm font-bold text-orange-700">
-                                  #{i + 1}
                                 </div>
                               </div>
                             );
@@ -1634,6 +2197,12 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                   }
                 >
                   Download methods.md
+                </button>
+                <button
+                  className="w-full text-left px-2 py-1 hover:bg-gray-50 rounded text-sm text-blue-600 font-medium"
+                  onClick={() => generatePDF()}
+                >
+                  📄 Download Intelligence Report PDF
                 </button>
               </div>
             </details>

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { apiBaseUrl } from "@/lib/api";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import Modal from "@/components/Modal";
+import ViewReport from "@/components/ViewReport";
 
 interface IntelligenceReport {
   run_id: string;
@@ -42,6 +44,9 @@ export default function MainInsightsPanel() {
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [activeSection, setActiveSection] = useState<"overview" | "reports" | "analysis">("overview");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedRunBundle, setSelectedRunBundle] = useState<any>(null);
+  const [metaAnalysis, setMetaAnalysis] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -50,6 +55,25 @@ export default function MainInsightsPanel() {
   useEffect(() => {
     loadData();
   }, [selectedSubject]);
+
+  const loadMetaAnalysis = async () => {
+    if (!selectedSubject) return;
+    
+    try {
+      const metaUrl = `${apiBaseUrl}/api/insights/meta_analysis?subject=${encodeURIComponent(selectedSubject)}`;
+      const metaRes = await fetch(metaUrl);
+      const metaJson = await metaRes.json();
+      setMetaAnalysis(metaJson);
+    } catch (e: any) {
+      console.error("Failed to load meta analysis:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === "analysis" && selectedSubject) {
+      loadMetaAnalysis();
+    }
+  }, [activeSection, selectedSubject]);
 
   const loadData = async () => {
     setLoading(true);
@@ -109,19 +133,21 @@ export default function MainInsightsPanel() {
 
   const recallReport = async (runId: string) => {
     try {
-      // Get the stored analysis
-      const response = await fetch(`${apiBaseUrl}/api/runs/${runId}/llm_citation_analysis`);
-      if (response.ok) {
-        const analysis = await response.json();
-        // Open in a modal or new window
-        console.log("Recalled analysis:", analysis);
-        // TODO: Implement modal display
-        alert(`Intelligence Report recalled for run ${runId}. Check console for data.`);
-      } else {
-        alert("Failed to recall intelligence report");
+      setLoading(true);
+      // First get the full run bundle (same as search page)
+      const bundleResponse = await fetch(`${apiBaseUrl}/api/runs/${runId}/trace`);
+      if (!bundleResponse.ok) {
+        throw new Error("Failed to get run data");
       }
-    } catch (e) {
-      alert("Error recalling report");
+      const bundle = await bundleResponse.json();
+      
+      // Set the bundle and open modal - ViewReport will handle the analysis fetching
+      setSelectedRunBundle(bundle);
+      setShowReportModal(true);
+    } catch (e: any) {
+      alert(`Error loading report: ${e.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -135,24 +161,14 @@ export default function MainInsightsPanel() {
       }
       const bundle = await bundleResponse.json();
       
-      // Generate intelligence report
-      const reportResponse = await fetch(`${apiBaseUrl}/api/runs/${runId}/llm_citation_analysis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bundle)
-      });
+      // Open modal with bundle - ViewReport will handle generation
+      setSelectedRunBundle(bundle);
+      setShowReportModal(true);
       
-      if (reportResponse.ok) {
-        const analysis = await reportResponse.json();
-        console.log("Generated analysis:", analysis);
-        alert(`Intelligence Report generated for run ${runId}. Check console for data.`);
-        // Refresh the data to show new report
-        await loadData();
-      } else {
-        throw new Error("Failed to generate report");
-      }
+      // Refresh the data to update reports list
+      await loadData();
     } catch (e: any) {
-      alert(`Error generating report: ${e.message}`);
+      alert(`Error loading run data: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -455,33 +471,241 @@ export default function MainInsightsPanel() {
         </div>
       )}
 
-      {/* Analysis Section - Placeholder for future AI Search Marketing Intelligence */}
+      {/* Analysis Section - Meta-Intelligence Dashboard */}
       {activeSection === "analysis" && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Search Marketing Intelligence</CardTitle>
-            </CardHeader>
-            <CardBody>
-              <div className="text-slate-600 space-y-4">
-                <p>This section will contain advanced marketing intelligence features:</p>
-                <ul className="list-disc list-inside space-y-2">
-                  <li><strong>Content Strategy Intelligence</strong> - Gap analysis and recommendations</li>
-                  <li><strong>Competitive Analysis</strong> - Who dominates AI citations in your space</li>
-                  <li><strong>Authority Patterns</strong> - What makes content citation-worthy</li>
-                  <li><strong>Publication Strategy</strong> - Where to publish for maximum AI visibility</li>
-                  <li><strong>Action Plans</strong> - Quarterly content roadmaps</li>
-                </ul>
-                <div className="mt-6 p-4 bg-blue-50 rounded">
-                  <p className="text-blue-800">
-                    <strong>Coming Soon:</strong> Full AI Search Marketing Intelligence Dashboard
-                    as described in the citation analysis requirements.
-                  </p>
+        <div className="space-y-6">
+          {!selectedSubject ? (
+            <Card>
+              <CardBody>
+                <div className="text-center py-8 text-slate-600">
+                  <p className="text-lg font-medium mb-2">Select a Subject for Meta-Intelligence Analysis</p>
+                  <p>Choose a subject above to analyze patterns across all your searches in that domain.</p>
                 </div>
-              </div>
-            </CardBody>
-          </Card>
+              </CardBody>
+            </Card>
+          ) : !metaAnalysis ? (
+            <Card>
+              <CardBody>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Analyzing patterns across all {selectedSubject} queries...</p>
+                </div>
+              </CardBody>
+            </Card>
+          ) : (
+            <>
+              {/* Header */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>🧠 AI Search Marketing Intelligence</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-blue-600">{metaAnalysis.total_queries_analyzed}</div>
+                        <div className="text-sm text-blue-700">Queries Analyzed</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-green-600">{metaAnalysis.competitive_landscape?.dominant_players?.length || 0}</div>
+                        <div className="text-sm text-green-700">Competing Domains</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-orange-600">{metaAnalysis.content_opportunities?.gaps?.length || 0}</div>
+                        <div className="text-sm text-orange-700">Content Gaps</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-purple-600">{metaAnalysis.competitive_landscape?.market_concentration?.market_structure || "Unknown"}</div>
+                        <div className="text-sm text-purple-700">Market Type</div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-slate-600 mt-4">
+                    <strong>Subject Intelligence Report:</strong> {selectedSubject} — Cross-query patterns and strategic recommendations
+                  </p>
+                </CardBody>
+              </Card>
+
+              {/* Competitive Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>🏆 Competitive Analysis - Who Dominates AI Citations</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium text-slate-800 mb-3">Market Leaders</h4>
+                      <div className="space-y-2">
+                        {metaAnalysis.competitive_landscape?.dominant_players?.slice(0, 8).map((player: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                            <span className="font-medium text-slate-700">{player.domain}</span>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-slate-900">{player.query_presence_pct}%</div>
+                              <div className="text-xs text-slate-500">{player.total_citations} citations</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-slate-800 mb-3">Market Concentration</h4>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="text-lg font-bold text-yellow-800 mb-2">
+                          {metaAnalysis.competitive_landscape?.market_concentration?.market_structure}
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Top 3 Market Share:</span>
+                            <span className="font-medium">{metaAnalysis.competitive_landscape?.market_concentration?.top_3_share}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Market Leader:</span>
+                            <span className="font-medium">{metaAnalysis.competitive_landscape?.market_concentration?.market_leader_share}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>HHI Score:</span>
+                            <span className="font-medium">{metaAnalysis.competitive_landscape?.market_concentration?.herfindahl_index}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Content Strategy Intelligence */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>💡 Content Strategy Intelligence - Gaps & Opportunities</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium text-green-800 mb-3">🎯 High-Opportunity Gaps</h4>
+                      {metaAnalysis.content_opportunities?.low_competition_topics?.length > 0 ? (
+                        <div className="space-y-3">
+                          {metaAnalysis.content_opportunities.low_competition_topics.slice(0, 5).map((gap: any, i: number) => (
+                            <div key={i} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="font-medium text-green-900 text-sm mb-1">{gap.query}</div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-green-700">Competition: {gap.source_count} sources</span>
+                                <span className="bg-green-200 text-green-800 px-2 py-1 rounded font-medium">
+                                  {gap.opportunity_score} opportunity
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-slate-600 text-sm">
+                          No low-competition opportunities found. All topics have moderate to high competition.
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-slate-800 mb-3">📊 Source Category Performance</h4>
+                      <div className="space-y-2">
+                        {metaAnalysis.competitive_landscape?.category_performance?.slice(0, 6).map((category: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                            <span className="text-slate-700 capitalize">{category.category.replace('_', ' ')}</span>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-slate-900">{category.citation_rate.toFixed(2)} rate</div>
+                              <div className="text-xs text-slate-500">{category.total_citations} citations</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Strategic Recommendations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>🚀 Strategic Recommendations & Action Plans</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium text-blue-800 mb-3">Immediate Actions</h4>
+                      <div className="space-y-3">
+                        {metaAnalysis.strategic_recommendations?.content_strategy?.map((rec: any, i: number) => (
+                          <div key={i} className="border-l-4 border-blue-500 bg-blue-50 p-3">
+                            <div className="flex justify-between items-start mb-1">
+                              <div className="font-medium text-blue-900">{rec.action}</div>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                rec.priority === 'HIGH' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'
+                              }`}>
+                                {rec.priority}
+                              </span>
+                            </div>
+                            <div className="text-sm text-blue-800">{rec.detail}</div>
+                            <div className="text-xs text-blue-600 mt-1">{rec.impact}</div>
+                          </div>
+                        ))}
+                        {metaAnalysis.strategic_recommendations?.competitive_positioning?.map((rec: any, i: number) => (
+                          <div key={i} className="border-l-4 border-orange-500 bg-orange-50 p-3">
+                            <div className="flex justify-between items-start mb-1">
+                              <div className="font-medium text-orange-900">{rec.action}</div>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                rec.priority === 'HIGH' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'
+                              }`}>
+                                {rec.priority}
+                              </span>
+                            </div>
+                            <div className="text-sm text-orange-800">{rec.detail}</div>
+                            <div className="text-xs text-orange-600 mt-1">{rec.impact}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-purple-800 mb-3">Quarterly Roadmap</h4>
+                      <div className="space-y-3">
+                        {metaAnalysis.strategic_recommendations?.quarterly_priorities?.map((quarter: any, i: number) => (
+                          <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <div className="font-medium text-purple-900">{quarter.quarter}</div>
+                              <div className="text-sm text-purple-700">{quarter.focus}</div>
+                            </div>
+                            <div className="text-xs text-purple-600">{quarter.rationale}</div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {metaAnalysis.strategic_recommendations?.publication_strategy?.length > 0 && (
+                        <div className="mt-4">
+                          <h5 className="font-medium text-slate-700 mb-2">Publication Strategy</h5>
+                          {metaAnalysis.strategic_recommendations.publication_strategy.map((pub: any, i: number) => (
+                            <div key={i} className="bg-green-50 border border-green-200 rounded p-2 text-sm">
+                              <div className="font-medium text-green-900">{pub.action}</div>
+                              <div className="text-green-700">{pub.detail}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </>
+          )}
         </div>
+      )}
+
+      {/* Intelligence Report Modal */}
+      {showReportModal && selectedRunBundle && (
+        <Modal
+          open={showReportModal}
+          onClose={() => {
+            setShowReportModal(false);
+            setSelectedRunBundle(null);
+          }}
+          title="AI Search Intelligence Report"
+        >
+          <ViewReport bundle={selectedRunBundle} />
+        </Modal>
       )}
     </div>
   );

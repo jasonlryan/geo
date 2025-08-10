@@ -302,6 +302,19 @@ export default function SearchPage() {
       {bundle && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-4">
+            {/* Query Display */}
+            <Card>
+              <CardBody>
+                <div className="text-sm text-slate-600 mb-2">
+                  <strong>Query:</strong>
+                </div>
+                <div className="text-lg text-slate-900 leading-relaxed">
+                  {bundle.run?.query}
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Answer */}
             <Card>
               <CardHeader>
                 <CardTitle>Answer</CardTitle>

@@ -386,6 +386,258 @@ def insights_aggregate(limit: int = 50, subject: str = None):
     }
 
 
+@router.get("/insights/meta_analysis")
+def insights_meta_analysis(subject: str = None):
+    """Enhanced meta-intelligence analysis across all runs for a subject.
+    
+    Returns strategic intelligence aggregated across multiple queries:
+    - Cross-query competitive analysis
+    - Authority patterns and success factors
+    - Content strategy gaps and opportunities
+    - Publication strategy recommendations
+    - Quarterly action planning data
+    """
+    recent = CACHE.zrevrange_withscores(CACHE.ai_key("recent"), 0, -1)
+    run_ids = [m for m, _ in recent]
+    
+    # Data structures for meta-analysis
+    all_runs = []
+    query_patterns = {}
+    domain_performance = {}  # domain -> {total_queries: int, cited_in: int, citation_count: int}
+    category_performance = {}  # category -> {queries: set, citations: int, sources: int}
+    content_gaps = {}  # topic areas with low competition
+    success_patterns = []  # characteristics of highly cited sources
+    publication_effectiveness = {}  # platform -> citation rates
+    
+    for run_id in run_ids:
+        bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+        if not bundle:
+            continue
+            
+        # Filter by subject
+        if subject:
+            bundle_subject = bundle.get("run", {}).get("subject")
+            if bundle_subject != subject:
+                continue
+        
+        all_runs.append(bundle)
+        query = bundle.get("run", {}).get("query", "")
+        sources = bundle.get("sources", [])
+        evidence = bundle.get("evidence", [])
+        
+        # Track query patterns
+        query_words = set(query.lower().split())
+        for word in query_words:
+            if len(word) > 3:  # Skip short words
+                if word not in query_patterns:
+                    query_patterns[word] = {"count": 0, "avg_sources": 0, "avg_citations": 0}
+                query_patterns[word]["count"] += 1
+                query_patterns[word]["avg_sources"] += len(sources)
+                query_patterns[word]["avg_citations"] += len(evidence)
+        
+        # Analyze domain performance across queries
+        cited_ids = {e.get("source_id") for e in evidence if e.get("source_id")}
+        src_by_id = {s.get("source_id"): s for s in sources}
+        
+        # Track all domains that appeared in this query
+        domains_in_query = set()
+        for source in sources:
+            domain = source.get("domain", "").lower()
+            if domain:
+                domains_in_query.add(domain)
+                if domain not in domain_performance:
+                    domain_performance[domain] = {
+                        "total_queries": 0,
+                        "cited_in": 0, 
+                        "total_citations": 0,
+                        "total_appearances": 0
+                    }
+                domain_performance[domain]["total_queries"] = len(all_runs)  # Will be updated each iteration
+                domain_performance[domain]["total_appearances"] += 1
+        
+        # Track citations per domain
+        for sid in cited_ids:
+            source = src_by_id.get(sid)
+            if source:
+                domain = source.get("domain", "").lower()
+                category = source.get("category", "web")
+                
+                if domain:
+                    domain_performance[domain]["total_citations"] += 1
+                    if domain in domains_in_query:
+                        domain_performance[domain]["cited_in"] += 1
+                
+                # Category performance
+                if category not in category_performance:
+                    category_performance[category] = {
+                        "queries": set(),
+                        "citations": 0,
+                        "sources": 0
+                    }
+                category_performance[category]["queries"].add(run_id)
+                category_performance[category]["citations"] += 1
+        
+        # Track all sources per category
+        for source in sources:
+            category = source.get("category", "web")
+            if category in category_performance:
+                category_performance[category]["sources"] += 1
+        
+        # Identify content gaps (queries with few sources)
+        source_count = len(sources)
+        if source_count < 5:  # Low competition threshold
+            gap_key = f"low_competition_{len(content_gaps)}"
+            content_gaps[gap_key] = {
+                "query": query,
+                "source_count": source_count,
+                "citation_rate": len(evidence) / max(source_count, 1),
+                "opportunity_score": (5 - source_count) * 20  # Higher score = bigger opportunity
+            }
+    
+    # Calculate final domain performance metrics
+    total_queries = len(all_runs)
+    domain_insights = []
+    for domain, stats in domain_performance.items():
+        citation_rate = stats["total_citations"] / max(stats["total_appearances"], 1)
+        query_presence = (stats["cited_in"] / max(total_queries, 1)) * 100
+        
+        domain_insights.append({
+            "domain": domain,
+            "query_presence_pct": round(query_presence, 1),
+            "total_citations": stats["total_citations"],
+            "citation_rate": round(citation_rate, 2),
+            "dominance_score": round(query_presence * citation_rate, 2)
+        })
+    
+    # Sort by dominance score
+    domain_insights.sort(key=lambda x: x["dominance_score"], reverse=True)
+    
+    # Category insights
+    category_insights = []
+    for category, stats in category_performance.items():
+        query_presence = len(stats["queries"])
+        citation_rate = stats["citations"] / max(stats["sources"], 1)
+        
+        category_insights.append({
+            "category": category,
+            "queries_present": query_presence,
+            "total_citations": stats["citations"], 
+            "total_sources": stats["sources"],
+            "citation_rate": round(citation_rate, 3),
+            "effectiveness_score": round(query_presence * citation_rate, 2)
+        })
+    
+    category_insights.sort(key=lambda x: x["effectiveness_score"], reverse=True)
+    
+    # Generate strategic recommendations
+    recommendations = generate_strategic_recommendations(
+        all_runs, domain_insights, category_insights, content_gaps, total_queries
+    )
+    
+    return {
+        "subject": subject,
+        "total_queries_analyzed": total_queries,
+        "competitive_landscape": {
+            "dominant_players": domain_insights[:10],
+            "category_performance": category_insights,
+            "market_concentration": calculate_market_concentration(domain_insights)
+        },
+        "content_opportunities": {
+            "gaps": list(content_gaps.values())[:10],
+            "low_competition_topics": [g for g in content_gaps.values() if g["source_count"] <= 3]
+        },
+        "strategic_recommendations": recommendations,
+        "meta_patterns": {
+            "most_competitive_query_terms": sorted(
+                [(k, v["avg_sources"]/v["count"]) for k, v in query_patterns.items() if v["count"] > 1],
+                key=lambda x: x[1], reverse=True
+            )[:10]
+        }
+    }
+
+
+def generate_strategic_recommendations(runs, domain_insights, category_insights, gaps, total_queries):
+    """Generate strategic recommendations based on meta-analysis"""
+    recommendations = {
+        "content_strategy": [],
+        "competitive_positioning": [],
+        "publication_strategy": [],
+        "quarterly_priorities": []
+    }
+    
+    # Content strategy recommendations
+    if len(gaps) > 0:
+        high_opportunity_gaps = [g for g in gaps.values() if g["opportunity_score"] >= 60]
+        if high_opportunity_gaps:
+            recommendations["content_strategy"].append({
+                "priority": "HIGH",
+                "action": "Target Low-Competition Topics",
+                "detail": f"Found {len(high_opportunity_gaps)} topics with <3 competing sources",
+                "impact": "First-mover advantage opportunities"
+            })
+    
+    # Competitive positioning
+    if domain_insights:
+        top_competitor = domain_insights[0]
+        if top_competitor["query_presence_pct"] > 50:
+            recommendations["competitive_positioning"].append({
+                "priority": "HIGH", 
+                "action": f"Challenge {top_competitor['domain']} dominance",
+                "detail": f"They appear in {top_competitor['query_presence_pct']}% of queries",
+                "impact": "Break competitor monopoly in key areas"
+            })
+    
+    # Publication strategy  
+    if category_insights:
+        top_category = category_insights[0]
+        recommendations["publication_strategy"].append({
+            "priority": "MEDIUM",
+            "action": f"Focus on {top_category['category']} content",
+            "detail": f"Highest citation rate ({top_category['citation_rate']}) in this category",
+            "impact": "Maximize publication ROI"
+        })
+    
+    # Quarterly priorities based on analysis
+    q1_priority = "Content gap targeting" if gaps else "Competitive differentiation"
+    recommendations["quarterly_priorities"] = [
+        {"quarter": "Q1", "focus": q1_priority, "rationale": "Address immediate opportunities"},
+        {"quarter": "Q2", "focus": "Authority building", "rationale": "Establish thought leadership"},
+        {"quarter": "Q3", "focus": "Scale successful formats", "rationale": "Double down on what works"},
+        {"quarter": "Q4", "focus": "Market expansion", "rationale": "Enter adjacent topic areas"}
+    ]
+    
+    return recommendations
+
+
+def calculate_market_concentration(domain_insights):
+    """Calculate market concentration metrics"""
+    if not domain_insights:
+        return {"herfindahl_index": 0, "top_3_share": 0, "market_leader_share": 0}
+    
+    total_citations = sum(d["total_citations"] for d in domain_insights)
+    if total_citations == 0:
+        return {"herfindahl_index": 0, "top_3_share": 0, "market_leader_share": 0}
+    
+    # Market shares
+    shares = [d["total_citations"] / total_citations for d in domain_insights]
+    
+    # Herfindahl Index (measure of market concentration)
+    hhi = sum(share ** 2 for share in shares) * 10000
+    
+    # Top 3 market share
+    top_3_share = sum(shares[:3]) * 100
+    
+    # Market leader share
+    market_leader_share = shares[0] * 100 if shares else 0
+    
+    return {
+        "herfindahl_index": round(hhi, 0),
+        "top_3_share": round(top_3_share, 1),
+        "market_leader_share": round(market_leader_share, 1),
+        "market_structure": "Highly Concentrated" if hhi > 2500 else "Moderately Concentrated" if hhi > 1500 else "Competitive"
+    }
+
+
 @router.post("/insights/migrate_legacy")
 def migrate_legacy(dry_run: bool = True, limit: int = 1000):
     """Copy legacy, un-versioned ai_search:* keys into versioned namespace.
