@@ -297,6 +297,7 @@ def insights_aggregate(limit: int = 50, subject: str = None):
     total_cited_sources = 0
     domain_citations: dict[str, int] = {}
     category_citations: dict[str, int] = {}
+    domains_by_category: dict[str, list] = {}  # Store actual cited articles by category
     runs_counted = 0
 
     for run_id in run_ids:
@@ -324,11 +325,26 @@ def insights_aggregate(limit: int = 50, subject: str = None):
                 continue
             # Domain counting
             domain = (s.get("domain") or "").lower()
+            category = s.get("category", "web")
+            
             if domain:
+                url = s.get("url", "")
+                title = s.get("title", domain)
                 domain_citations[domain] = domain_citations.get(domain, 0) + 1
+                
+                # Store actual cited articles by category
+                if category not in domains_by_category:
+                    domains_by_category[category] = []
+                
+                # Add this specific cited article
+                domains_by_category[category].append({
+                    "domain": domain,
+                    "url": url,
+                    "title": title,
+                    "source_id": s.get("source_id")
+                })
             
             # Category counting
-            category = s.get("category", "web")
             category_citations[category] = category_citations.get(category, 0) + 1
 
     avg_citation_rate = 0.0
@@ -337,6 +353,25 @@ def insights_aggregate(limit: int = 50, subject: str = None):
 
     domains_top = sorted(domain_citations.items(), key=lambda x: x[1], reverse=True)[:20]
     categories_sorted = sorted(category_citations.items(), key=lambda x: x[1], reverse=True)
+    
+    # Group and sort articles by domain within each category
+    domains_by_category_sorted = {}
+    for category, articles in domains_by_category.items():
+        # Group articles by domain
+        domain_groups = {}
+        for article in articles:
+            domain = article["domain"]
+            if domain not in domain_groups:
+                domain_groups[domain] = []
+            domain_groups[domain].append(article)
+        
+        # Sort domains by article count, then sort articles within each domain
+        sorted_domains = []
+        for domain, domain_articles in sorted(domain_groups.items(), key=lambda x: len(x[1]), reverse=True):
+            sorted_articles = sorted(domain_articles, key=lambda x: x["title"])
+            sorted_domains.append([domain, sorted_articles])
+        
+        domains_by_category_sorted[category] = sorted_domains
 
     return {
         "runs": runs_counted,
@@ -347,6 +382,7 @@ def insights_aggregate(limit: int = 50, subject: str = None):
         },
         "domains_top": domains_top,
         "source_categories": dict(categories_sorted),
+        "domains_by_category": domains_by_category_sorted,
     }
 
 

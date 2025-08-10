@@ -226,13 +226,27 @@ async def get_random_query(subject: str = "Executive Search"):
 async def get_unique_subjects():
     """Get unique subjects from all runs in Redis."""
     try:
-        runs = STORE.get_all_runs()
-        subjects = set()
+        from ..core.cache import CACHE
         
-        for run in runs:
-            subject = run.get("run", {}).get("subject", "").strip()
-            if subject and subject != "":
-                subjects.add(subject)
+        # Get all run keys from Redis
+        pattern = CACHE.ai_key("*")
+        run_keys = CACHE._redis.keys(pattern) if CACHE._redis else []
+        
+        subjects = set()
+        for key in run_keys:
+            try:
+                # Skip non-run keys (like query hashes)
+                if "query_hash:" in key.decode():
+                    continue
+                    
+                bundle = CACHE.get_json(key.decode())
+                if bundle and "run" in bundle:
+                    subject = bundle["run"].get("subject", "").strip()
+                    if subject and subject != "":
+                        subjects.add(subject)
+            except:
+                # Skip invalid keys
+                continue
         
         # Return sorted list of unique subjects
         return {"subjects": sorted(list(subjects))}

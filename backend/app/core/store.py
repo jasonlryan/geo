@@ -5,17 +5,11 @@ import os
 import hashlib
 from typing import Dict, Any, Optional
 
-from ..core.db import get_session
 from ..core.cache import CACHE
-from ..models import Run, Source, Claim, Evidence, Classification
 from ..utils.source_categorization import categorize_source
 
 
 class Store:
-    def __init__(self) -> None:
-        # In-memory fallback mirror for the full trace blob
-        self._mem: Dict[str, Dict[str, Any]] = {}
-
     def create_run(self, bundle: Dict[str, Any]) -> str:
         run_data = bundle["run"]
         run_id = run_data.get("run_id") or str(uuid.uuid4())
@@ -32,124 +26,50 @@ class Store:
         from ..services.analysis import compute_analysis
         analysis = compute_analysis(bundle)
         bundle["analysis"] = analysis  # Always include analysis metrics
+
+        # ONLY REDIS - Store the complete bundle permanently (no TTL)
+        CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle)
+
+        # Store query hash for deduplication (30m TTL)
+        query = (run_data.get("query") or "").strip().lower()
+        if query:
+            qhash = hashlib.sha256((query + os.getenv("PIPELINE_VERSION", "1")).encode()).hexdigest()
+            CACHE.set(CACHE.ai_key(f"query_hash:{qhash}"), run_id, ttl=30 * 60)
+            # Add to query history list (7d TTL)
+            CACHE.lpush(CACHE.ai_key(f"q:{qhash}"), run_id)
+            CACHE.ltrim(CACHE.ai_key(f"q:{qhash}"), 20)
+
+        # Index this run for recent queries (permanent)
+        created_at = run_data.get("created_at")
+        ts = None
+        if isinstance(created_at, str):
+            try:
+                iso = created_at[:-1] if created_at.endswith("Z") else created_at
+                ts = datetime.fromisoformat(iso).timestamp()
+            except Exception:
+                ts = None
+        if ts is None:
+            ts = datetime.utcnow().timestamp()
+        CACHE.zadd(CACHE.ai_key("recent"), score=ts, member=run_id)
         
-        # Keep an in-memory mirror for local dev convenience
-        self._mem[run_id] = bundle
-
-        # Persist the complete bundle to cache permanently (no TTL)
-        try:
-            CACHE.set_json(CACHE.ai_key(f"{run_id}"), bundle)
-        except Exception:
-            # Non-fatal: continue with DB write
-            pass
-
-        # Store a short-lived query hash → run_id for deduplication (30m)
-        try:
-            query = (run_data.get("query") or "").strip().lower()
-            if query:
-                qhash = hashlib.sha256((query + os.getenv("PIPELINE_VERSION", "1")).encode()).hexdigest()
-                CACHE.set(CACHE.ai_key(f"query_hash:{qhash}"), run_id, ttl=30 * 60)
-                # Indices - store permanently for marketing intelligence
-                CACHE.zadd(CACHE.ai_key("recent"), score=datetime.utcnow().timestamp(), member=run_id)
-                CACHE.lpush(CACHE.ai_key(f"q:{qhash}"), run_id, ttl=90 * 24 * 3600)  # 90 days for query history
-                CACHE.ltrim(CACHE.ai_key(f"q:{qhash}"), 20)
-        except Exception:
-            pass
-        with get_session() as s:
-            s.add(
-                Run(
-                    run_id=run_id,
-                    query=run_data["query"],
-                    created_at=_parse_ts(run_data["created_at"]),
-                    params_json=json.dumps(run_data.get("params") or {}),
-                    timings_json=json.dumps(run_data.get("timings") or {}),
-                    answer_text=(bundle.get("answer") or {}).get("text"),
-                )
-            )
-            for src in bundle.get("sources", []):
-                s.add(
-                    Source(
-                        source_id=src["source_id"],
-                        run_id=run_id,
-                        url=src.get("url"),
-                        canonical_url=src.get("canonical_url"),
-                        domain=src.get("domain"),
-                        title=src.get("title"),
-                        author=src.get("author"),
-                        publisher=src.get("publisher"),
-                        published_at=_parse_ts_opt(src.get("published_at")),
-                        accessed_at=_parse_ts_opt(src.get("accessed_at")),
-                        media_type=src.get("media_type"),
-                        geography=src.get("geography"),
-                        paywall=src.get("paywall"),
-                        credibility_json=json.dumps(src.get("credibility") or {}),
-                        content_hash=src.get("content_hash"),
-                        word_count=src.get("word_count"),
-                        raw_text=src.get("raw_text"),
-                    )
-                )
-            for c in bundle.get("claims", []):
-                s.add(
-                    Claim(
-                        claim_id=c["claim_id"],
-                        run_id=run_id,
-                        text=c["text"],
-                        importance=c.get("importance"),
-                        answer_sentence_index=c.get("answer_sentence_index"),
-                    )
-                )
-            for e in bundle.get("evidence", []):
-                s.add(
-                    Evidence(
-                        claim_id=e["claim_id"],
-                        source_id=e["source_id"],
-                        coverage_score=e.get("coverage_score"),
-                        stance=e.get("stance"),
-                        snippet=e.get("snippet"),
-                        start_offset=e.get("start_offset"),
-                        end_offset=e.get("end_offset"),
-                    )
-                )
-            for k in bundle.get("classifications", []):
-                s.add(
-                    Classification(
-                        source_id=k["source_id"],
-                        label_key=k["label_key"],
-                        label_value=k.get("label_value"),
-                        confidence=k.get("confidence"),
-                    )
-                )
-            s.commit()
         return run_id
 
     def get_run(self, run_id: str) -> Optional[Dict[str, Any]]:
-        # Prefer cached full bundle; fall back to in-memory mirror
-        try:
-            cached = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
-            if cached:
-                return cached
-        except Exception:
-            pass
-        return self._mem.get(run_id)
+        # ONLY REDIS
+        return CACHE.get_json(CACHE.ai_key(f"{run_id}"))
 
     def list_runs(self) -> Dict[str, Dict[str, Any]]:
-        return self._mem
+        # Get all runs from Redis
+        recent_key = CACHE.ai_key("recent")
+        run_ids = CACHE.zrevrange(recent_key, 0, -1)
+        
+        runs = {}
+        for run_id in run_ids:
+            bundle = CACHE.get_json(CACHE.ai_key(f"{run_id}"))
+            if bundle:
+                runs[run_id] = bundle
+        
+        return runs
 
 
 STORE = Store()
-
-
-def _parse_ts(ts: str) -> datetime:
-    # Handle "...Z" suffix ISO strings
-    if ts.endswith("Z"):
-        ts = ts[:-1]
-    return datetime.fromisoformat(ts)
-
-
-def _parse_ts_opt(ts: Optional[str]) -> Optional[datetime]:
-    if not ts:
-        return None
-    if ts.endswith("Z"):
-        ts = ts[:-1]
-    return datetime.fromisoformat(ts)
-

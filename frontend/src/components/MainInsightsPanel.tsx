@@ -16,6 +16,8 @@ interface IntelligenceReport {
 interface RecentRun {
   run_id: string;
   ts: number;
+  query?: string;
+  subject?: string;
 }
 
 interface AggregateData {
@@ -27,6 +29,7 @@ interface AggregateData {
   };
   domains_top: [string, number][];
   source_categories: Record<string, number>;
+  domains_by_category: Record<string, [string, {domain: string, url: string, title: string, source_id: string}[]][]>;
 }
 
 export default function MainInsightsPanel() {
@@ -38,6 +41,7 @@ export default function MainInsightsPanel() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [activeSection, setActiveSection] = useState<"overview" | "reports" | "analysis">("overview");
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -62,7 +66,27 @@ export default function MainInsightsPanel() {
         : `${apiBaseUrl}/api/insights/recent`;
       const recentRes = await fetch(recentUrl);
       const recentJson = await recentRes.json();
-      setRecent(recentJson.items || []);
+      
+      // Enrich recent runs with query and subject data
+      const enrichedRecent = await Promise.all(
+        (recentJson.items || []).slice(0, 10).map(async (run: RecentRun) => {
+          try {
+            const runRes = await fetch(`${apiBaseUrl}/api/runs/${run.run_id}`);
+            if (runRes.ok) {
+              const runData = await runRes.json();
+              return {
+                ...run,
+                query: runData.query || 'Unknown query',
+                subject: runData.subject || 'Unknown subject'
+              };
+            }
+          } catch (e) {
+            console.warn(`Failed to load details for run ${run.run_id}`);
+          }
+          return run;
+        })
+      );
+      setRecent(enrichedRecent);
 
       // Load stored intelligence reports
       const reportsRes = await fetch(`${apiBaseUrl}/api/insights/reports`);
@@ -99,6 +123,49 @@ export default function MainInsightsPanel() {
     } catch (e) {
       alert("Error recalling report");
     }
+  };
+
+  const generateReport = async (runId: string) => {
+    try {
+      setLoading(true);
+      // Get the run bundle first
+      const bundleResponse = await fetch(`${apiBaseUrl}/api/runs/${runId}/trace`);
+      if (!bundleResponse.ok) {
+        throw new Error("Failed to get run data");
+      }
+      const bundle = await bundleResponse.json();
+      
+      // Generate intelligence report
+      const reportResponse = await fetch(`${apiBaseUrl}/api/runs/${runId}/llm_citation_analysis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bundle)
+      });
+      
+      if (reportResponse.ok) {
+        const analysis = await reportResponse.json();
+        console.log("Generated analysis:", analysis);
+        alert(`Intelligence Report generated for run ${runId}. Check console for data.`);
+        // Refresh the data to show new report
+        await loadData();
+      } else {
+        throw new Error("Failed to generate report");
+      }
+    } catch (e: any) {
+      alert(`Error generating report: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
   };
 
   if (loading) return <div className="p-4">Loading insights...</div>;
@@ -187,21 +254,79 @@ export default function MainInsightsPanel() {
             </CardBody>
           </Card>
 
-          {agg && agg.source_categories && Object.keys(agg.source_categories).length > 0 && (
+          {agg && agg.domains_by_category && Object.keys(agg.domains_by_category).length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Cited Source Categories</CardTitle>
+                <CardTitle>Cited Domains by Source Category</CardTitle>
               </CardHeader>
               <CardBody>
                 <div className="space-y-2">
-                  {Object.entries(agg.source_categories)
-                    .sort(([,a], [,b]) => b - a)
-                    .map(([category, count]) => (
-                      <div key={category} className="flex justify-between items-center py-1">
-                        <span className="font-medium capitalize">{category.replace('_', ' ')}</span>
-                        <span className="bg-slate-100 px-2 py-1 rounded text-sm">{count}</span>
-                      </div>
-                    ))}
+                  {Object.entries(agg.domains_by_category)
+                    .sort(([,a], [,b]) => b.reduce((sum, [,articles]) => sum + articles.length, 0) - a.reduce((sum, [,articles]) => sum + articles.length, 0))
+                    .map(([category, domains]) => {
+                      const totalCount = domains.reduce((sum, [,articles]) => sum + articles.length, 0);
+                      const isExpanded = expandedCategories.has(category);
+                      
+                      return (
+                        <div key={category} className="border rounded-lg">
+                          <button
+                            onClick={() => toggleCategory(category)}
+                            className="w-full flex justify-between items-center p-3 hover:bg-slate-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium capitalize text-slate-900">
+                                {category.replace('_', ' ')}
+                              </span>
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+                                {totalCount}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-500">
+                                {totalCount} citation{totalCount !== 1 ? 's' : ''} • {domains.length} domain{domains.length !== 1 ? 's' : ''}
+                              </span>
+                              <svg
+                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </button>
+                          
+                          {isExpanded && (
+                            <div className="border-t bg-slate-50 p-3">
+                              <div className="space-y-3">
+                                {domains.map(([domain, articles]) => (
+                                  <div key={domain} className="space-y-1">
+                                    <div className="font-medium text-slate-700 text-sm">
+                                      {domain} ({articles.length})
+                                    </div>
+                                    <div className="space-y-1 ml-4">
+                                      {articles.map((article) => (
+                                        <div key={article.source_id} className="py-1">
+                                          <a
+                                            href={article.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors line-clamp-2"
+                                            title={article.title}
+                                          >
+                                            {article.title}
+                                          </a>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </CardBody>
             </Card>
@@ -277,6 +402,56 @@ export default function MainInsightsPanel() {
               )}
             </CardBody>
           </Card>
+
+          {/* Recent Runs without Reports */}
+          {recent.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Runs - Generate Intelligence Reports</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  {recent.slice(0, 5).map((run) => {
+                    // Check if this run already has a report
+                    const hasReport = reports.some(r => r.run_id === run.run_id);
+                    if (hasReport) return null;
+                    
+                    return (
+                      <div key={run.run_id} className="border rounded-lg p-4 hover:bg-slate-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="font-medium text-slate-900 mb-1">
+                              {run.query || 'Loading query...'}
+                            </div>
+                            <div className="text-sm text-slate-600 space-y-1">
+                              <div>Subject: {run.subject || 'Loading...'}</div>
+                              <div>Date: {new Date(run.ts * 1000).toLocaleDateString()}</div>
+                              <div className="text-xs text-slate-500">Run ID: {run.run_id}</div>
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <Button
+                              size="sm"
+                              variant="solid"
+                              onClick={() => generateReport(run.run_id)}
+                              disabled={loading}
+                            >
+                              Generate Report
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }).filter(Boolean)}
+                </div>
+                {recent.filter(run => !reports.some(r => r.run_id === run.run_id)).length === 0 && (
+                  <div className="text-slate-600 text-center py-4">
+                    All recent runs have intelligence reports generated.
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          )}
         </div>
       )}
 
