@@ -32,8 +32,8 @@ def build_analysis_input(bundle: Dict[str, Any]) -> Dict[str, Any]:
     cited_ids = {e.get("source_id") for e in evidence if e.get("source_id")}
     cited = [s for s in sources if s.get("source_id") in cited_ids]
     non_cited = [s for s in sources if s.get("source_id") not in cited_ids]
-    # Cap: all cited + top 5 non-cited, but never exceed 12 total
-    limited = (cited + non_cited[:5])[:12]
+    # Cap: all cited + top 10 non-cited, but never exceed 20 total
+    limited = (cited + non_cited[:10])[:20]
 
     def to_source(s: Dict[str, Any]) -> Dict[str, Any]:
         # Keep snippets compact to reduce tokens (≈ 800–1200 chars)

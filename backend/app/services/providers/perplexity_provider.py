@@ -13,11 +13,11 @@ class PerplexityProvider(SearchProvider):
     name = "perplexity"
 
     def __init__(self) -> None:
-        api_key = os.getenv("PERPLEXITY_API_KEY")
+        api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise RuntimeError("PERPLEXITY_API_KEY not set")
+            raise RuntimeError("OPENROUTER_API_KEY not set")
         self.api_key = api_key
-        self.base_url = "https://api.perplexity.ai/chat/completions"
+        self.base_url = "https://openrouter.ai/api/v1/chat/completions"
 
     async def search(self, query: str, *, limit: int = 10) -> List[ProviderResult]:
         """
@@ -26,11 +26,13 @@ class PerplexityProvider(SearchProvider):
         """
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": os.getenv("SITE_URL", "https://geo-search.com"),
+            "X-Title": os.getenv("SITE_NAME", "Geo Search")
         }
         
-        # Use Sonar model for web search capabilities
-        model = os.getenv("PERPLEXITY_MODEL", "llama-3.1-sonar-small-128k-online")
+        # Use Sonar model via OpenRouter - prefix with perplexity/
+        model = "perplexity/sonar"
         
         payload = {
             "model": model,
@@ -50,12 +52,7 @@ class PerplexityProvider(SearchProvider):
                 }
             ],
             "max_tokens": 1500,
-            "temperature": 0.1,
-            "search_domain_filter": ["arxiv.org", "gov", "edu"],  # Bias toward authority
-            "search_recency_filter": "month",
-            "return_related_questions": False,
-            "return_images": False,
-            "return_citations": True
+            "temperature": 0.1
         }
 
         try:
@@ -85,35 +82,53 @@ class PerplexityProvider(SearchProvider):
         results = []
         
         try:
+            # Get content from response
             choices = data.get("choices", [])
             if not choices:
                 return results
                 
             message = choices[0].get("message", {})
             content = message.get("content", "")
-            citations = message.get("citations", [])
             
-            # Extract URLs from citations array (Perplexity's structured citations)
-            cited_urls = []
-            for citation in citations:
-                if isinstance(citation, str):
-                    cited_urls.append(citation)
-                elif isinstance(citation, dict):
-                    url = citation.get("url") or citation.get("link")
-                    if url:
-                        cited_urls.append(url)
+            # OpenRouter puts citations at root level
+            citations = data.get("citations", [])
             
-            # Also extract URLs mentioned in content using regex
-            url_pattern = r'https?://[^\s\[\]()"]+'
-            content_urls = re.findall(url_pattern, content)
+            # Also check for annotations in message
+            annotations = message.get("annotations", [])
+            annotation_urls = []
+            for ann in annotations:
+                if ann.get("type") == "url_citation":
+                    url_cit = ann.get("url_citation", {})
+                    if url_cit.get("url"):
+                        annotation_urls.append({
+                            "url": url_cit["url"],
+                            "title": url_cit.get("title", "")
+                        })
             
-            # Combine and deduplicate URLs
-            all_urls = list(set(cited_urls + content_urls))
+            # Combine all sources
+            all_urls = []
+            
+            # Add root-level citations
+            for url in citations:
+                if url and isinstance(url, str):
+                    all_urls.append(url)
+            
+            # Add annotation URLs if no root citations
+            if not all_urls and annotation_urls:
+                all_urls = [a["url"] for a in annotation_urls]
             
             # Create ProviderResults for each cited source
             for i, url in enumerate(all_urls[:limit]):
-                # Extract domain-based title hint
-                title = self._generate_title_from_url(url, content)
+                # Check if we have a title from annotations
+                title = None
+                for ann in annotation_urls:
+                    if ann["url"] == url and ann["title"]:
+                        title = ann["title"]
+                        break
+                
+                # Otherwise generate from URL/content
+                if not title:
+                    title = self._generate_title_from_url(url, content)
                 
                 # Extract relevant snippet from content for this URL
                 snippet = self._extract_snippet_for_url(url, content)

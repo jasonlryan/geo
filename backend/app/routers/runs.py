@@ -382,6 +382,34 @@ def insights_recent(limit: int = 20, subject: str = None):
     key = CACHE.ai_key("recent")
     items = CACHE.zrevrange_withscores(key, 0, max(0, limit - 1))
     
+    # If no items in index, rebuild it from existing runs
+    if not items:
+        print("[REBUILD] Recent index empty, rebuilding from existing runs...")
+        all_keys = CACHE.keys(CACHE.ai_key("*"))
+        run_keys = [k for k in all_keys if k.split(":")[-1] not in ["recent", "reports"] and len(k.split(":")) == 3]
+        
+        for run_key in run_keys:
+            bundle = CACHE.get_json(run_key)
+            if bundle and "run" in bundle:
+                run_id = bundle["run"].get("run_id")
+                created_at = bundle["run"].get("created_at")
+                if run_id:
+                    from datetime import datetime
+                    ts = None
+                    if isinstance(created_at, str):
+                        try:
+                            iso = created_at[:-1] if created_at.endswith("Z") else created_at
+                            ts = datetime.fromisoformat(iso).timestamp()
+                        except Exception:
+                            pass
+                    if ts is None:
+                        ts = datetime.now(datetime.UTC).timestamp()
+                    CACHE.zadd(CACHE.ai_key("recent"), score=ts, member=run_id)
+        
+        # Get items again after rebuild
+        items = CACHE.zrevrange_withscores(key, 0, max(0, limit - 1))
+        print(f"[REBUILD] Added {len(items)} items to recent index")
+    
     # Filter by subject if provided
     filtered_items = []
     for run_id, ts in items:
@@ -416,12 +444,19 @@ def insights_reports(limit: int = 20):
             analysis = CACHE.get_json(CACHE.ai_key(f"analysis:{run_id}"))
             if analysis and "metadata" in analysis:
                 metadata = analysis["metadata"]
+                # Use generated_at for both created_at and generated_at since that's when the report was actually created
+                report_date = metadata.get("generated_at", "")
+                # Fallback to converting Redis timestamp if needed
+                if not report_date:
+                    from datetime import datetime
+                    report_date = datetime.fromtimestamp(timestamp).isoformat() + "Z"
+                
                 reports.append({
                     "run_id": run_id,
                     "query": metadata.get("query", ""),
                     "search_model": metadata.get("search_model", "Unknown"),
-                    "created_at": metadata.get("created_at", ""),
-                    "generated_at": metadata.get("generated_at", ""),
+                    "created_at": report_date,
+                    "generated_at": report_date,
                     "has_analysis": bool(analysis.get("analysis") or analysis.get("classifications"))
                 })
         

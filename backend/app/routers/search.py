@@ -50,13 +50,14 @@ def create_run(body: SearchRequest) -> SearchResponse:
             return SearchResponse(run_id=existing)
 
     try:
-        results: list[ProviderResult] = asyncio.run(run_search(body.query))
+        results_tuple = asyncio.run(run_search(body.query))
     except RuntimeError:
         # If we're already in an event loop (e.g., called from async context), run directly
-        results = asyncio.get_event_loop().run_until_complete(run_search(body.query))
+        results_tuple = asyncio.get_event_loop().run_until_complete(run_search(body.query))
 
-    # Extract provider performance data if available
-    provider_performance = getattr(results, 'provider_performance', {})
+    # Unpack results and provider performance
+    results: list[ProviderResult] = results_tuple[0]
+    provider_performance = results_tuple[1]
 
     if results:
         # Fetch top pages and build minimal real-only bundle
@@ -86,7 +87,11 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "media_type": "web",
                 "geography": "Unknown",
                 "paywall": False,
-                "credibility": {"score": 0.6, "rationale": "default"},
+                "credibility": {
+                    "score": doc.get("credibility_score", 0.6), 
+                    "band": doc.get("credibility_band", "C"),
+                    "rationale": f"Calculated based on domain authority ({doc.get('credibility_category', 'unknown')})"
+                },
                 "content_hash": None,
                 "word_count": len((doc.get("raw_text") or "").split()) if doc.get("raw_text") else 0,
                 "raw_text": doc.get("raw_text") or "",
@@ -96,7 +101,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "extraction_confidence": doc.get("extraction_confidence", 0.8),
                 # Multi-provider consensus metadata (if available)
                 "discovered_by": doc.get("discovered_by", [doc.get("search_provider", "unknown")]),
-                "provider_scores": doc.get("provider_scores", {doc.get("search_provider", "unknown"): 0.5}),
+                "provider_scores": doc.get("provider_scores", {doc.get("search_provider", "unknown"): doc.get("credibility_score", 0.5)}),
                 "consensus_boost": doc.get("consensus_boost", 0.0),
             })
 

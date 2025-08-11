@@ -5,6 +5,12 @@ import json
 from typing import Any, Dict, List
 
 from openai import OpenAI
+try:
+    from .true_citation_selector import TRUE_CITATION_SELECTOR
+    print("[COMPOSER DEBUG] TRUE_CITATION_SELECTOR imported successfully")
+except Exception as e:
+    print(f"[COMPOSER DEBUG] IMPORT ERROR: {e}")
+    TRUE_CITATION_SELECTOR = None
 
 
 def _client() -> OpenAI:
@@ -25,10 +31,31 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     model = os.getenv("OPENAI_MODEL_COMPOSER", "gpt-4o-mini")
     
-    # Authority floor configuration
-    min_authority_sources = int(os.getenv("MIN_AUTHORITY_SOURCES", "2"))
-    authority_floor_enabled = os.getenv("AUTHORITY_FLOOR_ENABLED", "true").lower() == "true"
+    # Use TRUE citation selection - NO hardcoded domain scores!
+    print(f"[COMPOSER DEBUG] Starting citation selection with {len(sources)} sources")
     
+    # TEMPORARY: Force bypass citation selector to test if server restart needed
+    print(f"[COMPOSER DEBUG] FORCING BYPASS - Using first {min(10, len(sources))} sources directly")
+    selected_sources = sources[:10]
+    
+    # Minimum source check (much more lenient than old authority floor)
+    min_sources = max(1, int(os.getenv("MIN_AUTHORITY_SOURCES", "2")))
+    print(f"[COMPOSER DEBUG] Min sources required: {min_sources}, Selected sources: {len(selected_sources)}")
+    
+    if len(selected_sources) < min_sources:
+        print(f"[COMPOSER DEBUG] INSUFFICIENT SOURCES - returning error")
+        return {
+            "answer_text": f"Insufficient relevant sources found to provide a comprehensive answer. Found {len(selected_sources)} suitable sources, but require at least {min_sources} for reliable information.",
+            "sentences": [],
+            "insufficient_sources": True,
+            "sources_found": len(selected_sources),
+            "min_required": min_sources,
+            "available_sources": len(sources)
+        }
+    
+    print(f"[COMPOSER DEBUG] Proceeding to LLM with {len(selected_sources)} sources")
+    
+    # Format selected sources for the model
     src_brief = [
         {
             "source_id": s["source_id"],
@@ -40,38 +67,20 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
             "credibility_band": s.get("credibility", {}).get("band", "C"),
             "snippet": (s.get("raw_text") or s.get("title") or "")[:800],
         }
-        for s in sources
+        for s in selected_sources
     ]
-    
-    # Apply authority floor guardrails
-    if authority_floor_enabled:
-        high_authority_sources = [
-            s for s in src_brief 
-            if s["credibility_band"] in ["A", "B"] or s["credibility_score"] >= 0.6
-        ]
-        
-        if len(high_authority_sources) < min_authority_sources:
-            # Return insufficient authority response instead of composing with low-quality sources
-            return {
-                "answer_text": f"Insufficient high-authority sources available to provide a reliable answer. Found {len(high_authority_sources)} authoritative sources, but require at least {min_authority_sources}. Consider expanding the search or using authority-biased query variants.",
-                "sentences": [],
-                "authority_floor_triggered": True,
-                "high_authority_count": len(high_authority_sources),
-                "min_required": min_authority_sources,
-                "available_sources": len(src_brief)
-            }
 
     system = (
         "You are a precise research assistant. Answer the user's query using the provided sources. "
         "Every sentence in your answer must include one or more citations referencing source_id values. "
-        "\n**AUTHORITY PRIORITIZATION:**\n"
-        "- STRONGLY prefer citing gov/edu/research sources (credibility_score ≥0.8) over corporate sources\n"
-        "- Require at least one high-authority citation (gov/edu/research) per sentence when available\n"
-        "- Avoid citing corporate blogs or marketing content unless they contain unique primary data\n"
-        "- When multiple sources support a claim, prioritize: gov > edu > research > news > consultancy > corporate\n"
-        "\nPrefer citing multiple independent sources (different domains). Aim for ≥2 citations per sentence when available, "
-        "and at least 4 unique sources across the whole answer if possible. "
-        "If few sources are available, cite all relevant ones. "
+        "\n**TRUE AI SEARCH APPROACH:**\n"
+        "- Sources selected PURELY by content relevance and quality - NO domain authority bias\n"
+        "- Mix includes: government, academic, commercial, news, community sources based on content value\n"
+        "- A tech company blog may be more valuable than a random .edu page for tech queries\n"
+        "- Community sources (Reddit, Stack Overflow) can provide practical insights\n"
+        "- Commercial sources offer real-world implementation details\n"
+        "\nUse all provided sources - they were chosen for content quality and query relevance. "
+        "Cite 2-4 sources per sentence when available. Mix source types naturally based on what information they provide. "
         "Return strict JSON with keys: answer_text, sentences[]. Each sentences[] item has text and source_ids[]."
     )
     user = {

@@ -3,14 +3,16 @@ from __future__ import annotations
 import asyncio
 import os
 from typing import List
+import time
+from collections import defaultdict
 
 from .providers.base import ProviderResult
 from .fetch_parse import fetch_and_parse
 from .providers.tavily_provider import TavilySearchProvider
 from .providers.openai_provider import OpenAISearchProvider
-from .providers.brave_provider import BraveSearchProvider
-from .providers.bing_provider import BingSearchProvider
+# from .providers.brave_provider import BraveSearchProvider  # Disabled due to rate limits
 from .providers.perplexity_provider import PerplexityProvider
+from .providers.gemini_provider import GeminiProvider
 from .providers.consensus_merger import ConsensusResultMerger
 
 
@@ -119,9 +121,9 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
     provider_configs = [
         (TavilySearchProvider, "Tavily"),
         (OpenAISearchProvider, "OpenAI"), 
-        (BraveSearchProvider, "Brave"),
-        (BingSearchProvider, "Bing"),
-        (PerplexityProvider, "Perplexity")
+        # (BraveSearchProvider, "Brave"),  # Temporarily disabled due to rate limits
+        (PerplexityProvider, "Perplexity"),
+        (GeminiProvider, "Gemini")
     ]
     
     for provider_class, provider_name in provider_configs:
@@ -140,8 +142,37 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
     print(f"[INFO] Running multi-provider search with {len(providers)} providers")
     variants = await expand_queries(query)
 
+    # Rate limiting setup
+    rate_limits = {
+        # "brave": float(os.getenv("RATE_LIMIT_BRAVE", "0.5")),  # Disabled
+        "tavily": float(os.getenv("RATE_LIMIT_TAVILY", "2")),
+        "openai": float(os.getenv("RATE_LIMIT_OPENAI", "2")),
+        "perplexity": float(os.getenv("RATE_LIMIT_PERPLEXITY", "1")),
+        "gemini": float(os.getenv("RATE_LIMIT_GEMINI", "1"))
+    }
+    
+    # Track last request time for each provider
+    last_request_time = defaultdict(float)
+    
     async def search_one(p, q: str) -> List[ProviderResult]:
-        """Search one provider with one query variant."""
+        """Search one provider with one query variant with rate limiting."""
+        # Apply rate limiting
+        provider_name = p.name.lower()
+        rate_limit = rate_limits.get(provider_name, 1.0)
+        min_interval = 1.0 / rate_limit  # Convert to seconds between requests
+        
+        # Calculate delay needed
+        current_time = time.time()
+        time_since_last = current_time - last_request_time[provider_name]
+        delay_needed = max(0, min_interval - time_since_last)
+        
+        if delay_needed > 0:
+            print(f"[RATE_LIMIT] Waiting {delay_needed:.2f}s before {p.name} request...")
+            await asyncio.sleep(delay_needed)
+        
+        # Update last request time
+        last_request_time[provider_name] = time.time()
+        
         try:
             results = await p.search(q, limit=limit_per_query)
             print(f"[INFO] {p.name} returned {len(results)} results for: {q[:50]}...")
@@ -150,13 +181,21 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
             print(f"[ERROR] Search failed for {p.name}: {e}")
             return []
 
-    # Execute all provider x query combinations in parallel
+    # Execute searches grouped by provider to respect rate limits better
     tasks = []
     provider_query_pairs = []
+    
+    # Group by provider to ensure rate limiting works properly
     for p in providers:
+        # Create tasks for this provider sequentially to respect rate limits
+        provider_tasks = []
         for q in variants:
-            tasks.append(search_one(p, q))
+            task = search_one(p, q)
+            provider_tasks.append(task)
             provider_query_pairs.append((p.name, q))
+        
+        # Add all tasks for this provider
+        tasks.extend(provider_tasks)
     
     results_lists = await asyncio.gather(*tasks)
     all_results: List[ProviderResult] = [r for lst in results_lists for r in lst]
@@ -226,11 +265,8 @@ async def run_search(query: str, limit_per_query: int | None = None) -> List[Pro
     }
     print(f"[RESEARCH] Consensus stats: {consensus_stats}")
     
-    # Store provider performance data for research analysis
-    # This will be added to the bundle by the calling function
-    final_results.provider_performance = provider_performance
-    
-    return final_results
+    # Return results with provider performance as a tuple
+    return (final_results, provider_performance)
 
 
 async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = None) -> List[dict]:
@@ -257,6 +293,15 @@ async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = Non
             "extraction_method": p.get("extraction_method", "unknown"),
             "content_length": p.get("content_length", 0),
             "search_provider": r.provider,  # Explicit field for provider attribution analysis
+            # Preserve credibility data calculated during reranking
+            "credibility_score": getattr(r, 'credibility_score', 0.5),
+            "credibility_band": getattr(r, 'credibility_band', 'C'),
+            "credibility_category": getattr(r, 'credibility_category', 'unknown'),
+            "credibility_factors": getattr(r, 'credibility_factors', []),
+            # Preserve consensus data
+            "discovered_by": r.discovered_by,
+            "provider_scores": r.provider_scores,
+            "consensus_boost": r.consensus_boost,
         })
     return docs
 
@@ -311,6 +356,12 @@ async def rerank_by_authority(results: List[ProviderResult]) -> List[ProviderRes
         
         category_boost = category_boosts.get(category, 0.40)
         final_score = authority_score * category_boost
+        
+        # Store credibility data in the result for later use
+        result.credibility_score = authority_score
+        result.credibility_band = credibility_data["band"]
+        result.credibility_category = category
+        result.credibility_factors = credibility_data["factors"]
         
         scored_results.append((final_score, result))
     
