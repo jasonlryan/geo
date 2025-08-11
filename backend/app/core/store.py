@@ -25,24 +25,15 @@ class Store:
             category = categorize_source(domain, media_type)
             source["category"] = category
             
-            # Calculate real credibility score using enhanced data
-            from ..utils.source_categorization import calculate_credibility_score
-            credibility = calculate_credibility_score(
-                domain=domain,
-                category=category,
-                published_at=source.get("published_at"),
-                content_length=source.get("content_length", 0),
-                author=source.get("author", ""),
-                title=source.get("title", "")
-            )
-            source["credibility"] = credibility
+            # NO HARDCODED CREDIBILITY - TRUE citation selector handles this
+            # credibility scoring REMOVED - was biasing results
             
             # Track provider performance stats
             provider = source.get("search_provider", "unknown")
             if provider not in provider_stats:
                 provider_stats[provider] = {
                     "count": 0,
-                    "total_credibility": 0.0,
+                    # "total_credibility": REMOVED - no hardcoded scores
                     "categories": {},
                     "avg_content_length": 0,
                     "total_content_length": 0
@@ -50,7 +41,7 @@ class Store:
             
             stats = provider_stats[provider]
             stats["count"] += 1
-            stats["total_credibility"] += credibility.get("score", 0.0)
+            # stats["total_credibility"] REMOVED - no hardcoded scores
             stats["total_content_length"] += source.get("content_length", 0)
             
             # Track category distribution per provider
@@ -61,10 +52,10 @@ class Store:
         # Calculate averages and finalize provider stats
         for provider, stats in provider_stats.items():
             if stats["count"] > 0:
-                stats["avg_credibility"] = round(stats["total_credibility"] / stats["count"], 3)
+                # stats["avg_credibility"] REMOVED - no hardcoded scores
                 stats["avg_content_length"] = round(stats["total_content_length"] / stats["count"], 0)
             # Remove totals (keep only aggregated values)
-            del stats["total_credibility"]
+            # del stats["total_credibility"] REMOVED
             del stats["total_content_length"]
         
         # Add provider performance data to bundle

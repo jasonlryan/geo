@@ -161,53 +161,30 @@ def calculate_credibility_score(domain: str, category: str, published_at: str | 
     factors = []
     score = 0.0
     
-    # Base domain authority score by category (most important factor)
+    # NEUTRALIZED: Equal base scores - let content quality determine authority
     domain_scores = {
-        "gov": 0.95,      # Government sources - highest authority
-        "edu": 0.90,      # Academic institutions - very high authority
-        "research": 0.85, # Research institutes - high authority
-        "news": 0.75,     # Established news orgs - good authority
-        "consultancy": 0.70,  # Management consulting - professional authority
-        "financial": 0.65,    # Financial institutions - moderate authority
-        "legal": 0.80,    # Legal sources - high for legal topics
-        "nonprofit": 0.60,    # Nonprofits - moderate authority
-        "agency": 0.55,   # Recruitment agencies - lower authority
-        "corporate": 0.50,    # Corporate websites - baseline authority
-        "social": 0.30,   # Social media - low authority
-        "blog": 0.35,     # Personal/corporate blogs - low authority
+        "gov": 0.60,      # Neutral base score
+        "edu": 0.60,      # Neutral base score
+        "research": 0.60, # Neutral base score
+        "news": 0.60,     # Neutral base score
+        "consultancy": 0.60,  # Neutral base score
+        "financial": 0.60,    # Neutral base score
+        "legal": 0.60,    # Neutral base score
+        "nonprofit": 0.60,    # Neutral base score
+        "agency": 0.60,   # Neutral base score
+        "corporate": 0.60,    # Neutral base score
+        "social": 0.60,   # Neutral base score
+        "blog": 0.60,     # Neutral base score
     }
     
     base_score = domain_scores.get(category, 0.40)
     score = base_score
     factors.append(f"Domain authority ({category}): {base_score:.2f}")
     
-    # Domain-specific adjustments for known high-authority sources
-    high_authority_domains = {
-        # Government
-        "sec.gov": 0.98, "fed.gov": 0.98, "treasury.gov": 0.98,
-        # News/Media 
-        "reuters.com": 0.85, "bloomberg.com": 0.85, "wsj.com": 0.82, 
-        "ft.com": 0.82, "economist.com": 0.80, "nytimes.com": 0.78,
-        # Research/Think Tanks
-        "brookings.edu": 0.90, "rand.org": 0.88, "cfr.org": 0.87,
-        "pewresearch.org": 0.85, "urban.org": 0.83,
-        # Academic Publishers (high authority for research)
-        "nature.com": 0.95, "science.org": 0.95, "cell.com": 0.94,
-        "pnas.org": 0.94, "springer.com": 0.88, "ieee.org": 0.87,
-        "acm.org": 0.87, "sciencedirect.com": 0.86, "wiley.com": 0.85,
-        "sagepub.com": 0.84, "tandfonline.com": 0.84, "jstor.org": 0.83,
-        "nejm.org": 0.93, "bmj.com": 0.91, "thelancet.com": 0.92,
-        # Consulting
-        "mckinsey.com": 0.78, "bcg.com": 0.76, "bain.com": 0.75,
-        "deloitte.com": 0.74, "pwc.com": 0.73, "kpmg.com": 0.72,
-        # Academic Institutions
-        "harvard.edu": 0.92, "stanford.edu": 0.92, "mit.edu": 0.92,
-    }
+    # DISABLED: No hardcoded domain authority - let content quality decide
+    # high_authority_domains = {...}  # COMPLETELY REMOVED
     
-    if domain.lower() in high_authority_domains:
-        adjustment = high_authority_domains[domain.lower()] - base_score
-        score += adjustment
-        factors.append(f"Premium domain bonus: +{adjustment:.2f}")
+    # No domain-specific score adjustments
     
     # Recency factor (more important for time-sensitive topics)
     if published_at:

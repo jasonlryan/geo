@@ -273,13 +273,13 @@ async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = Non
     if max_docs is None:
         max_docs = int(os.getenv("FETCH_MAX_DOCS", "20"))
     
-    # Apply authority-based pre-filtering and re-ranking before fetch
-    reranked_results = await rerank_by_authority(results)
+    # NO PRE-FILTERING - let TRUE citation selector decide based on content
+    # reranked_results = await rerank_by_authority(results)  # REMOVED - was biasing toward .gov/.edu
     
-    tasks = [fetch_and_parse(r.url) for r in reranked_results[:max_docs]]
+    tasks = [fetch_and_parse(r.url) for r in results[:max_docs]]
     parsed = await asyncio.gather(*tasks)
     docs = []
-    for r, p in zip(reranked_results[:max_docs], parsed):
+    for r, p in zip(results[:max_docs], parsed):
         if not p:
             continue
         docs.append({
@@ -293,11 +293,11 @@ async def fetch_top(results: List[ProviderResult], *, max_docs: int | None = Non
             "extraction_method": p.get("extraction_method", "unknown"),
             "content_length": p.get("content_length", 0),
             "search_provider": r.provider,  # Explicit field for provider attribution analysis
-            # Preserve credibility data calculated during reranking
-            "credibility_score": getattr(r, 'credibility_score', 0.5),
-            "credibility_band": getattr(r, 'credibility_band', 'C'),
-            "credibility_category": getattr(r, 'credibility_category', 'unknown'),
-            "credibility_factors": getattr(r, 'credibility_factors', []),
+            # NO HARDCODED CREDIBILITY - let TRUE citation selector decide
+            # "credibility_score": REMOVED
+            # "credibility_band": REMOVED
+            # "credibility_category": REMOVED
+            # "credibility_factors": REMOVED
             # Preserve consensus data
             "discovered_by": r.discovered_by,
             "provider_scores": r.provider_scores,
@@ -339,23 +339,11 @@ async def rerank_by_authority(results: List[ProviderResult]) -> List[ProviderRes
         
         authority_score = credibility_data["score"]
         
-        # Boost score based on category priority
-        category_boosts = {
-            "gov": 1.0,       # Highest priority
-            "edu": 0.95,      # Very high
-            "research": 0.90, # High priority  
-            "news": 0.75,     # Medium-high
-            "nonprofit": 0.70, # Medium
-            "consultancy": 0.60, # Medium-low
-            "financial": 0.55, # Lower
-            "legal": 0.75,    # Medium-high for legal topics
-            "corporate": 0.30, # Low priority
-            "blog": 0.20,     # Very low
-            "social": 0.10,   # Lowest
-        }
+        # DISABLED: No more hardcoded category boosts - let TRUE citation selector decide
+        # category_boosts = {...}  # REMOVED
         
-        category_boost = category_boosts.get(category, 0.40)
-        final_score = authority_score * category_boost
+        # Use base credibility score without hardcoded domain bias
+        final_score = authority_score
         
         # Store credibility data in the result for later use
         result.credibility_score = authority_score

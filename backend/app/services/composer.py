@@ -31,15 +31,24 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     model = os.getenv("OPENAI_MODEL_COMPOSER", "gpt-4o-mini")
     
-    # Use TRUE citation selection - NO hardcoded domain scores!
+    # TRUE citation selection with passage grounding
     print(f"[COMPOSER DEBUG] Starting citation selection with {len(sources)} sources")
+    desired_k = 3
+    if TRUE_CITATION_SELECTOR:
+        try:
+            desired_k = TRUE_CITATION_SELECTOR.target_citations_for(query)
+        except Exception:
+            desired_k = 3
     
-    # TEMPORARY: Force bypass citation selector to test if server restart needed
-    print(f"[COMPOSER DEBUG] FORCING BYPASS - Using first {min(10, len(sources))} sources directly")
-    selected_sources = sources[:10]
+    if TRUE_CITATION_SELECTOR:
+        selected_sources = TRUE_CITATION_SELECTOR.select_citations(query, sources, target_count=desired_k)
+        if not selected_sources:
+            selected_sources = sources[:desired_k]
+    else:
+        selected_sources = sources[:desired_k]
     
-    # Minimum source check (much more lenient than old authority floor)
-    min_sources = max(1, int(os.getenv("MIN_AUTHORITY_SOURCES", "2")))
+    # Minimum source check (lenient)
+    min_sources = max(1, int(os.getenv("MIN_AUTHORITY_SOURCES", "1")))
     print(f"[COMPOSER DEBUG] Min sources required: {min_sources}, Selected sources: {len(selected_sources)}")
     
     if len(selected_sources) < min_sources:
@@ -53,7 +62,22 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
             "available_sources": len(sources)
         }
     
-    print(f"[COMPOSER DEBUG] Proceeding to LLM with {len(selected_sources)} sources")
+    # Simple abstain heuristic if passages are weak
+    try:
+        avg_pass = sum((s.get("_best_passage", {}) or {}).get("score", 0.0) for s in selected_sources) / max(1, len(selected_sources))
+    except Exception:
+        avg_pass = 0.0
+    
+    if avg_pass < 1.2 and len(selected_sources) < 2:
+        print(f"[COMPOSER DEBUG] Abstaining due to weak passages. avg_pass={avg_pass:.2f}, sources={len(selected_sources)}")
+        return {
+            "answer_text": "I couldn't find strong, directly relevant passages to answer this confidently.",
+            "sentences": [],
+            "insufficient_sources": True,
+            "available_sources": len(sources)
+        }
+    
+    print(f"[COMPOSER DEBUG] Proceeding to LLM with {len(selected_sources)} sources (k={desired_k})")
     
     # Format selected sources for the model
     src_brief = [
@@ -62,25 +86,17 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
             "title": s.get("title"),
             "domain": s.get("domain"),
             "url": s.get("url"),
-            "category": s.get("category", "unknown"),
-            "credibility_score": s.get("credibility", {}).get("score", 0.5),
-            "credibility_band": s.get("credibility", {}).get("band", "C"),
-            "snippet": (s.get("raw_text") or s.get("title") or "")[:800],
+            # composer is STRICTLY passage-grounded:
+            "passage": (s.get("_best_passage") or {}).get("text") or (s.get("raw_text") or "")[:800],
         }
         for s in selected_sources
     ]
 
     system = (
-        "You are a precise research assistant. Answer the user's query using the provided sources. "
-        "Every sentence in your answer must include one or more citations referencing source_id values. "
-        "\n**TRUE AI SEARCH APPROACH:**\n"
-        "- Sources selected PURELY by content relevance and quality - NO domain authority bias\n"
-        "- Mix includes: government, academic, commercial, news, community sources based on content value\n"
-        "- A tech company blog may be more valuable than a random .edu page for tech queries\n"
-        "- Community sources (Reddit, Stack Overflow) can provide practical insights\n"
-        "- Commercial sources offer real-world implementation details\n"
-        "\nUse all provided sources - they were chosen for content quality and query relevance. "
-        "Cite 2-4 sources per sentence when available. Mix source types naturally based on what information they provide. "
+        "You are a precise research assistant. Use ONLY the provided passages to answer the user's query.\n"
+        "- Every sentence MUST include 1–3 citations referencing source_id values.\n"
+        "- If a statement is not directly supported by a passage, do not include it.\n"
+        "- Keep it concise (3–6 sentences), factual, and grounded.\n"
         "Return strict JSON with keys: answer_text, sentences[]. Each sentences[] item has text and source_ids[]."
     )
     user = {
@@ -101,14 +117,22 @@ def compose_answer(query: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
     )
     content = resp.choices[0].message.content
     data = json.loads(content)
-    # Validate minimal shape
-    answer_text = data.get("answer_text") or ""
-    sentences = data.get("sentences") or []
-    if not isinstance(sentences, list):
-        sentences = []
-    # Normalize source_ids to strings
-    for s in sentences:
-        ids = s.get("source_ids") or []
-        s["source_ids"] = [str(x) for x in ids]
+    
+    # Normalize shape & keys (handle sourceIds / citations / numeric indices)
+    raw_sentences = data.get("sentences") or data.get("Sentences") or []
+    sentences = []
+    id_map = {i + 1: s["source_id"] for i, s in enumerate(selected_sources)}
+    
+    for item in raw_sentences:
+        ids = item.get("source_ids") or item.get("sourceIds") or item.get("citations") or []
+        # map numeric refs (1-based) to source_ids
+        if ids and all(isinstance(x, (int, float)) for x in ids):
+            ids = [id_map.get(int(x)) for x in ids if id_map.get(int(x))]
+        ids = [str(x) for x in ids if x]
+        if ids and (item.get("text") or "").strip():
+            sentences.append({"text": item["text"].strip(), "source_ids": ids})
+    
+    # Clean answer_text - let UI handle citation formatting from sentences[]
+    answer_text = " ".join(s['text'] for s in sentences)
     return {"answer_text": answer_text, "sentences": sentences}
 

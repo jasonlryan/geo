@@ -87,10 +87,11 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "media_type": "web",
                 "geography": "Unknown",
                 "paywall": False,
+                # NO HARDCODED CREDIBILITY - TRUE citation selector handles this
                 "credibility": {
-                    "score": doc.get("credibility_score", 0.6), 
-                    "band": doc.get("credibility_band", "C"),
-                    "rationale": f"Calculated based on domain authority ({doc.get('credibility_category', 'unknown')})"
+                    "score": 0.5,  # Neutral - let passage scoring decide
+                    "band": "N/A",
+                    "rationale": "Content-based scoring in citation selector"
                 },
                 "content_hash": None,
                 "word_count": len((doc.get("raw_text") or "").split()) if doc.get("raw_text") else 0,
@@ -101,7 +102,7 @@ def create_run(body: SearchRequest) -> SearchResponse:
                 "extraction_confidence": doc.get("extraction_confidence", 0.8),
                 # Multi-provider consensus metadata (if available)
                 "discovered_by": doc.get("discovered_by", [doc.get("search_provider", "unknown")]),
-                "provider_scores": doc.get("provider_scores", {doc.get("search_provider", "unknown"): doc.get("credibility_score", 0.5)}),
+                "provider_scores": doc.get("provider_scores", {doc.get("search_provider", "unknown"): 0.5}),
                 "consensus_boost": doc.get("consensus_boost", 0.0),
             })
 

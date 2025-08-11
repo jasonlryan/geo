@@ -192,9 +192,9 @@ export default function AboutPage() {
                   6
                 </div>
                 <div>
-                  <h4 className="font-semibold text-slate-800">Realistic Citation Selection (2025 Research)</h4>
+                  <h4 className="font-semibold text-slate-800">Passage-Based Citation Selection (2025 Research)</h4>
                   <p className="text-slate-600">
-                    NEW: We now mirror actual AI search engine behavior using query-relevance scoring, contextual authority, diversity requirements, and Reciprocal Rank Fusion methodology - not simple domain TLD rankings
+                    NEW: We now mirror actual AI search engine behavior using passage-level BM25 scoring (45% relevance, 25% passage quality, 20% content depth, 10% consensus) - exactly how Perplexity/ChatGPT select citations from best snippets, not domain TLD rankings
                   </p>
                 </div>
               </div>
@@ -256,9 +256,10 @@ export default function AboutPage() {
               <div className="bg-white p-3 rounded border border-green-200">
                 <h4 className="font-semibold text-green-800 mb-2">✅ New Approach (Research-Based)</h4>
                 <ul className="space-y-1 text-green-700 text-sm">
-                  <li>• Query relevance is primary factor (45% weight)</li>
-                  <li>• Contextual authority based on topic</li>
-                  <li>• Enforced diversity requirements by source type</li>
+                  <li>• Passage-level BM25 relevance (45% weight)</li>
+                  <li>• Best snippet quality scoring (25% weight)</li>
+                  <li>• Content depth and structure (20% weight)</li>
+                  <li>• Multi-provider consensus (10% weight)</li>
                   <li>• Tech startup blog {'>'} random .edu for tech queries</li>
                   <li>• Mirrors actual ChatGPT/Perplexity citation patterns</li>
                 </ul>
@@ -266,21 +267,26 @@ export default function AboutPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div className="text-center p-4 bg-purple-50 border border-purple-200 rounded">
               <div className="text-2xl font-bold text-purple-800">45%</div>
-              <div className="text-sm text-purple-600">Query Relevance Weight</div>
-              <div className="text-xs text-purple-500 mt-1">How well content answers the specific query</div>
+              <div className="text-sm text-purple-600">Passage Relevance</div>
+              <div className="text-xs text-purple-500 mt-1">BM25 best snippet scoring</div>
             </div>
             <div className="text-center p-4 bg-orange-50 border border-orange-200 rounded">
               <div className="text-2xl font-bold text-orange-800">25%</div>
-              <div className="text-sm text-orange-600">Contextual Authority</div>
-              <div className="text-xs text-orange-500 mt-1">Domain authority weighted by topic context</div>
+              <div className="text-sm text-orange-600">Passage Quality</div>
+              <div className="text-xs text-orange-500 mt-1">Snippet depth and clarity</div>
             </div>
             <div className="text-center p-4 bg-green-50 border border-green-200 rounded">
-              <div className="text-2xl font-bold text-green-800">30%</div>
-              <div className="text-sm text-green-600">Quality + Freshness</div>
-              <div className="text-xs text-green-500 mt-1">Content depth, structure, and recency</div>
+              <div className="text-2xl font-bold text-green-800">20%</div>
+              <div className="text-sm text-green-600">Content Structure</div>
+              <div className="text-xs text-green-500 mt-1">Organization and formatting</div>
+            </div>
+            <div className="text-center p-4 bg-blue-50 border border-blue-200 rounded">
+              <div className="text-2xl font-bold text-blue-800">10%</div>
+              <div className="text-sm text-blue-600">Consensus Score</div>
+              <div className="text-xs text-blue-500 mt-1">Multi-provider discovery</div>
             </div>
           </div>
           

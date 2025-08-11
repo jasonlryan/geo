@@ -1,22 +1,40 @@
 """
-True AI Citation Selector - NO hardcoded domain scores!
-Based on actual content quality and query relevance like real AI search engines.
+True AI Citation Selector - content-first citation selection with passage grounding.
+Adds:
+- best-passage scoring (Perplexity/SGE style)
+- optional trust prior blended with consensus (no hardcoded domain lists)
+- intent-aware K (how many citations) and gentler diversity by query type
 """
 
 import re
 from typing import List, Dict, Any, Set, Tuple
 from collections import defaultdict, Counter
 import math
+import os
+from .passage_ranker import bm25_best_passage
+from .trust_prior import domain_reliability
 
 
 class TrueCitationSelector:
     def __init__(self):
-        # NO hardcoded domain scores! Only diversity requirements
+        # diversity defaults; some are adjusted dynamically based on K
         self.diversity_requirements = {
             "minimum_diversity": 3,  # At least 3 different domain types
-            "max_same_domain": 3,    # Max 3 citations from same domain
+            "max_same_domain": 3,    # default; will scale with target_count
             "prefer_different_tlds": True
         }
+        self.use_trust_prior = os.getenv("TRUE_USE_TRUST_PRIOR", "false").lower() == "true"
+
+    # --- intent heuristics (SGE-like) ---
+    def target_citations_for(self, query: str) -> int:
+        q = (query or "").lower()
+        if any(w in q for w in ["latest", "today", "breaking", "now", "2024", "2025", "news", "update"]):
+            return 5
+        if any(w in q for w in ["how to", "guide", "setup", "implement", "api", "error", "fix", "configure"]):
+            return 4
+        if any(w in q for w in ["compare", "vs", "pros", "cons", "which", "best"]):
+            return 4
+        return 3
 
     def calculate_content_relevance_score(self, query: str, source: Dict[str, Any]) -> float:
         """Calculate how well the content actually answers the query - NO domain bias"""
@@ -106,7 +124,8 @@ class TrueCitationSelector:
 
     def calculate_consensus_score(self, source: Dict[str, Any]) -> float:
         """Multi-provider consensus - sources found by multiple engines are better"""
-        provider_count = len(source.get('search_providers', []))
+        providers = source.get('search_providers') or source.get('discovered_by') or []
+        provider_count = len(providers)
         
         if provider_count >= 3:
             return 1.0  # Strong consensus
@@ -148,6 +167,8 @@ class TrueCitationSelector:
         domain_counts = defaultdict(int)
         domain_type_counts = defaultdict(int)
         used_domains = set()
+        # scale cap by K (allow a bit more from same domain when K is small)
+        dynamic_cap = max(1, min(self.diversity_requirements['max_same_domain'], target_count - 1))
         
         # First pass: Select top sources with diversity constraints
         for source, score in scored_sources:
@@ -158,7 +179,7 @@ class TrueCitationSelector:
             domain_type = self.get_domain_type(domain)
             
             # Skip if we already have too many from this domain
-            if domain_counts[domain] >= self.diversity_requirements['max_same_domain']:
+            if domain_counts[domain] >= dynamic_cap:
                 continue
             
             # Prefer different domain types for diversity
@@ -203,20 +224,43 @@ class TrueCitationSelector:
             print(f"[DEBUG] First source domain: {first_source.get('domain', 'MISSING')}")
             print(f"[DEBUG] First source title: {first_source.get('title', 'MISSING')}")
         
-        scored_sources = []
+        # intent-aware K override if caller left default
+        if target_count == 10:
+            target_count = self.target_citations_for(query)
+        
+        scored_sources: List[Tuple[Dict[str, Any], float]] = []
         
         for source in sources:
             # Pure content-based scoring
             relevance_score = self.calculate_content_relevance_score(query, source)
             quality_score = self.calculate_content_quality_score(source)
             consensus_score = self.calculate_consensus_score(source)
+            # Passage-level evidence (best passage)
+            bestp = bm25_best_passage(query, source.get("raw_text", ""))
+            source["_best_passage"] = bestp
+            passage_score = min(1.0, bestp["score"] / 6.0)  # simple scaling
             
-            # Composite score: relevance is king, quality matters, consensus helps
-            composite_score = (
-                relevance_score * 0.6 +    # Query relevance is primary
-                quality_score * 0.3 +      # Content quality 
-                consensus_score * 0.1      # Multi-provider consensus
-            )
+            # Optional trust prior blended with consensus (still content-first)
+            trust = 0.5
+            if self.use_trust_prior:
+                dom = (source.get("domain") or "").lower()
+                trust = min(0.95, domain_reliability(dom) * 0.6 + consensus_score * 0.4)
+            
+            # Composite score (passage grounded)
+            if self.use_trust_prior:
+                composite_score = (
+                    relevance_score * 0.40 +
+                    passage_score  * 0.25 +
+                    quality_score  * 0.20 +
+                    trust          * 0.15
+                )
+            else:
+                composite_score = (
+                    relevance_score * 0.45 +
+                    passage_score  * 0.25 +
+                    quality_score  * 0.20 +
+                    consensus_score* 0.10
+                )
             
             scored_sources.append((source, composite_score))
             
