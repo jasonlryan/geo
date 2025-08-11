@@ -8,7 +8,7 @@ INPUT
 - search_model: {search_model} (e.g., "Tavily")
 - sources: [{ 
     source_id, url, domain, title, published_at|null, media_type|null, 
-    source_category, credibility_score, authority_level, recency_category,
+    source_category, passage_relevance_score, snippet_quality, consensus_count,
     author|null, publisher|null, word_count, paywall, text_snippet (≤1200 chars) 
   }]
 - claims: [{ claim_id, text, answer_sentence_index }]
@@ -16,63 +16,63 @@ INPUT
 - funnel: { proposed, fetched, cited }
 - owned_domains (optional): ["brand.com","sub.brand.com"] (assume [] if absent)
 
-AI SEARCH MECHANISM ANALYSIS
+AI SEARCH MECHANISM ANALYSIS (2025 Passage-Based Selection)
 Your goal is to understand:
 
-1. What SOURCE TYPES does AI prioritize? (gov, academic, news, corporate, social, etc.)
-2. What CONTENT FORMATS work best? (long-form, lists, data, case studies, etc.)
-3. What AUTHORITY SIGNALS matter? (domain authority, recency, specificity, structure, etc.)
+1. What PASSAGE QUALITY makes content get cited? (relevance to query, snippet clarity, information density)
+2. What CONTENT FORMATS work best? (structured passages, clear explanations, specific examples)
+3. What CONSENSUS PATTERNS matter? (multi-provider discovery, cross-engine visibility)
 4. What CONTENT GAPS exist that could be filled to gain AI visibility?
-5. What RANKING PATTERNS can you identify from the selection funnel?
+5. Why certain sources get IGNORED despite being discovered? (weak passages, poor query match, unclear snippets)
 
 TAXONOMY FOR AI SEARCH VISIBILITY
 
 Use the provided source_category values: [gov, edu, research, consultancy, agency, news, financial, legal, nonprofit, corporate, social, blog]
 
-- source_type: Use source_category + authority_level (high/medium/low) + recency_category (recent/medium/stale)
+- source_type: Use source_category only (domain type no longer determines citation)
 - content_format: [comprehensive_guide, data_analysis, opinion_piece, news_report, how_to_tutorial, case_study, product_documentation, comparison_analysis, industry_survey, thought_leadership, structured_data, other]
-- authority_signals: [high_credibility_score, expert_authored, institutional_backing, recent_publication, comprehensive_coverage, data_rich, structured_content, specific_examples, other]
-- visibility_factors: [exact_keyword_match, semantic_relevance, content_depth, data_specificity, publication_recency, domain_trust, content_structure, uniqueness, authoritative_tone, other]
+- passage_quality_signals: [high_bm25_score, clear_snippet_extraction, direct_answer_present, specific_examples, structured_content, information_density, query_term_coverage, other]
+- visibility_factors: [passage_relevance, snippet_clarity, multi_provider_consensus, content_depth, query_match_quality, unique_insights, actionable_information, other]
 
 ANALYSIS TASKS
 
-1. AI Search Selection Patterns:
+1. AI Search Selection Patterns (Passage-Based):
 
-   - Analyze proposed → fetched → cited funnel to identify selection bias
-   - What source types have highest citation rates?
-   - What content characteristics correlate with being chosen?
-   - What patterns exist in successful vs unsuccessful sources?
+   - Analyze proposed → fetched → cited funnel based on PASSAGE QUALITY
+   - What makes certain passages score higher in BM25 relevance?
+   - Why do sources with good domains get IGNORED? (weak snippets, poor query match)
+   - What passage characteristics correlate with citation selection?
 
 2. Content Opportunity Identification:
 
-   - What content gaps exist that AI isn't finding good sources for?
-   - What formats/structures appear to work best for this query type?
-   - What authority signals can be built or acquired?
+   - What content gaps exist where NO sources have strong passages?
+   - What passage structures work best? (lists, definitions, examples, data)
+   - How to write content that extracts into clear, relevant snippets?
 
 3. Competitive Intelligence:
-   - Which domains/publishers are winning AI search visibility?
-   - What makes their content more likely to be cited?
-   - Where are opportunities to compete or differentiate?
+   - Which publishers write content with high-scoring passages?
+   - What makes their snippets more citation-worthy?
+   - How does multi-provider consensus affect citation rates?
 
 OUTPUT STRICT JSON SCHEMA
 {
 "ai_search_intelligence": {
 "selection_patterns": {
-"preferred_source_types": ["gov", "academic", "major_news"],
+"high_scoring_passage_types": ["direct_definitions", "structured_lists", "specific_examples"],
 "preferred_content_formats": ["comprehensive_guide", "data_analysis"],
-"key_authority_signals": ["domain_authority_high", "recent_publication"],
-"citation_success_factors": ["exact_keyword_match", "content_depth"]
+"key_passage_signals": ["high_bm25_relevance", "clear_snippet_extraction", "query_term_density"],
+"citation_success_factors": ["passage_relevance", "snippet_clarity", "multi_provider_discovery"]
 },
 "visibility_opportunities": {
-"content_gaps": ["specific analysis of X", "comprehensive guide to Y"],
-"recommended_formats": ["whitepaper", "case_study", "data_analysis"],
-"authority_building": ["publish on high-authority domain", "include specific data"],
-"structural_recommendations": ["use clear headings", "include examples"]
+"content_gaps": ["no sources with clear passages on X", "weak snippets for Y topic"],
+"recommended_formats": ["structured_guide", "numbered_lists", "definition_focused"],
+"passage_optimization": ["write self-contained paragraphs", "frontload key information", "use query terms naturally"],
+"structural_recommendations": ["clear topic sentences", "specific examples in each section", "avoid marketing fluff"]
 },
 "competitive_landscape": {
-"dominant_publishers": [{"domain": "example.com", "advantage": "government backing"}],
-"successful_strategies": ["data-heavy content", "institutional authority"],
-"market_gaps": ["no recent analysis", "limited vendor-neutral sources"]
+"dominant_publishers": [{"domain": "example.com", "advantage": "clear, structured content"}],
+"successful_strategies": ["self-contained passages", "direct answers", "high information density"],
+"market_gaps": ["no sources with clear snippets on X", "all sources have vague/generic content"]
 }
 },
 "mechanism_insights": {
@@ -90,20 +90,20 @@ OUTPUT STRICT JSON SCHEMA
 "actionable_recommendations": {
 "immediate_actions": [
 {
-"action": "Create data-heavy analysis of leadership trends",
-"rationale": "AI prefers data-rich content for this query type",
-"target_format": "whitepaper",
-"authority_signals": ["cite_primary_research", "use_institutional_backing"],
+"action": "Rewrite content with clear, self-contained passages",
+"rationale": "AI selects based on passage relevance, not domain authority",
+"target_format": "structured_guide",
+"passage_optimization": ["frontload_answers", "use_specific_examples", "avoid_generic_statements"],
 "effort": "medium",
 "impact": "high"
 }
 ],
 "strategic_initiatives": [
 {
-"initiative": "Partner with academic institution for co-authored research",
-"rationale": "Academic sources show 3x higher citation rates",
-"timeline": "quarterly",
-"effort": "high",
+"initiative": "Optimize content for snippet extraction and passage scoring",
+"rationale": "Passage quality determines citations, not domain type",
+"timeline": "monthly",
+"effort": "medium",
 "impact": "high"
 }
 ]

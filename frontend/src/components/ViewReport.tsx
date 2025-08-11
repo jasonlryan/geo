@@ -38,48 +38,84 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
   const generatePDF = async () => {
     if (!analysisData) return;
-    
+
     try {
       // Use browser's print to PDF functionality
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open("", "_blank");
       if (!printWindow) return;
 
       // Generate the report content as clean HTML
-      const reportTitle = `AI Search Intelligence Report - ${bundle.run?.subject || 'Analysis'}`;
+      const reportTitle = `AI Search Intelligence Report - ${bundle.run?.subject || "Analysis"}`;
       const reportDate = new Date().toLocaleDateString();
-      const query = bundle.run?.query || '';
-      const subject = bundle.run?.subject || 'Not specified';
-      
+      const query = bundle.run?.query || "";
+      const subject = bundle.run?.subject || "Not specified";
+
       // Calculate key metrics
       const sourceCount = bundle.sources?.length || 0;
       const citedCount = bundle.evidence?.length || 0;
-      const citationRate = sourceCount > 0 ? Math.round((citedCount / sourceCount) * 100) : 0;
-      const uniquePublishers = new Set(bundle.sources?.map((s: any) => s.domain) || []).size;
+      const citationRate =
+        sourceCount > 0 ? Math.round((citedCount / sourceCount) * 100) : 0;
+      const uniquePublishers = new Set(
+        bundle.sources?.map((s: any) => s.domain) || []
+      ).size;
 
       // Get cited sources
-      const citedSourceIds = new Set(bundle.evidence?.map((e: any) => e.source_id) || []);
-      const citedSources = bundle.sources?.filter((s: any) => citedSourceIds.has(s.source_id)) || [];
+      const citedSourceIds = new Set(
+        bundle.evidence?.map((e: any) => e.source_id) || []
+      );
+      const citedSources =
+        bundle.sources?.filter((s: any) => citedSourceIds.has(s.source_id)) ||
+        [];
 
       // Source categorization for insights
       const categorizeSource = (domain: string) => {
         const d = domain.toLowerCase();
         if (d.includes(".gov") || d.includes(".mil")) return "Government";
-        if (d.includes(".edu") || d.includes("university") || d.includes("college")) return "Academic";
-        if (d.includes("mckinsey") || d.includes("bcg") || d.includes("bain")) return "Management Consulting";
-        if (d.includes("kornferry") || d.includes("russell") || d.includes("egon")) return "Executive Search";
-        if (d.includes("forbes") || d.includes("fortune") || d.includes("hbr.org")) return "Business Media";
-        if (d.includes("reuters") || d.includes("bloomberg") || d.includes("wsj")) return "Financial News";
-        if (d.includes("techcrunch") || d.includes("wired") || d.includes("theverge")) return "Tech Media";
+        if (
+          d.includes(".edu") ||
+          d.includes("university") ||
+          d.includes("college")
+        )
+          return "Academic";
+        if (d.includes("mckinsey") || d.includes("bcg") || d.includes("bain"))
+          return "Management Consulting";
+        if (
+          d.includes("kornferry") ||
+          d.includes("russell") ||
+          d.includes("egon")
+        )
+          return "Executive Search";
+        if (
+          d.includes("forbes") ||
+          d.includes("fortune") ||
+          d.includes("hbr.org")
+        )
+          return "Business Media";
+        if (
+          d.includes("reuters") ||
+          d.includes("bloomberg") ||
+          d.includes("wsj")
+        )
+          return "Financial News";
+        if (
+          d.includes("techcrunch") ||
+          d.includes("wired") ||
+          d.includes("theverge")
+        )
+          return "Tech Media";
         return "Corporate Websites";
       };
 
-      const sourceCategories = bundle.sources?.reduce((acc: any, source: any) => {
-        const category = categorizeSource(source.domain);
-        acc[category] = (acc[category] || 0) + 1;
-        return acc;
-      }, {}) || {};
+      const sourceCategories =
+        bundle.sources?.reduce((acc: any, source: any) => {
+          const category = categorizeSource(source.domain);
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {}) || {};
 
-      const topCategory = Object.entries(sourceCategories).sort(([,a], [,b]) => (b as number) - (a as number))[0];
+      const topCategory = Object.entries(sourceCategories).sort(
+        ([, a], [, b]) => (b as number) - (a as number)
+      )[0];
 
       const htmlContent = `
 <!DOCTYPE html>
@@ -329,81 +365,121 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
         </div>
     </div>
 
-    ${citedSources.length > 0 ? `
+    ${
+      citedSources.length > 0
+        ? `
     <div class="section">
         <h2>Who Actually Gets Cited?</h2>
         <div class="citation-list">
-            ${citedSources.slice(0, 8).map((source: any, i: number) => {
-              const citationCount = bundle.evidence?.filter((e: any) => e.source_id === source.source_id).length || 0;
-              return `
+            ${citedSources
+              .slice(0, 8)
+              .map((source: any, i: number) => {
+                const citationCount =
+                  bundle.evidence?.filter(
+                    (e: any) => e.source_id === source.source_id
+                  ).length || 0;
+                return `
                 <div class="citation-item">
                     <div class="citation-title">#${i + 1}: ${source.title || source.url}</div>
-                    <div class="citation-domain">${source.domain} • ${citationCount} citation${citationCount !== 1 ? 's' : ''}</div>
+                    <div class="citation-domain">${source.domain} • ${citationCount} citation${citationCount !== 1 ? "s" : ""}</div>
                 </div>
               `;
-            }).join('')}
+              })
+              .join("")}
         </div>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
-    ${Object.keys(sourceCategories).length > 0 ? `
+    ${
+      Object.keys(sourceCategories).length > 0
+        ? `
     <div class="section">
         <h2>Source Type Analysis</h2>
         <div class="category-breakdown">
             <h4>Citation Authority Breakdown</h4>
             ${Object.entries(sourceCategories)
-              .sort(([,a], [,b]) => (b as number) - (a as number))
+              .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 8)
               .map(([category, count]) => {
-                const percentage = Math.round(((count as number) / sourceCount) * 100);
+                const percentage = Math.round(
+                  ((count as number) / sourceCount) * 100
+                );
                 return `
                   <div class="category-item">
                       <span class="category-name">${category}</span>
                       <span class="category-count">${count} (${percentage}%)</span>
                   </div>
                 `;
-              }).join('')}
-            ${topCategory ? `
+              })
+              .join("")}
+            ${
+              topCategory
+                ? `
             <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 6px;">
                 <strong>💡 Marketing Insight:</strong> 
                 ${(() => {
                   const topCategoryName = topCategory[0];
-                  const topCategoryPercent = Math.round(((topCategory[1] as number) / sourceCount) * 100);
-                  
-                  if (topCategoryName === "Government" || topCategoryName === "Academic") {
+                  const topCategoryPercent = Math.round(
+                    ((topCategory[1] as number) / sourceCount) * 100
+                  );
+
+                  if (
+                    topCategoryName === "Government" ||
+                    topCategoryName === "Academic"
+                  ) {
                     return `${topCategoryPercent}% authoritative sources - build credibility through official partnerships`;
-                  } else if (topCategoryName === "Management Consulting" || topCategoryName === "Executive Search") {
+                  } else if (
+                    topCategoryName === "Management Consulting" ||
+                    topCategoryName === "Executive Search"
+                  ) {
                     return `${topCategoryPercent}% from consulting - establish thought leadership in your industry`;
-                  } else if (topCategoryName === "Business Media" || topCategoryName === "Financial News") {
+                  } else if (
+                    topCategoryName === "Business Media" ||
+                    topCategoryName === "Financial News"
+                  ) {
                     return `${topCategoryPercent}% media coverage - focus on newsworthy content and PR`;
                   } else {
                     return `Diverse mix across ${Object.keys(sourceCategories).length} categories - multi-channel content strategy needed`;
                   }
                 })()}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
         </div>
     </div>
-    ` : ''}
+    `
+        : ""
+    }
 
     <div class="section">
         <h2>Strategic Intelligence & Action Plan</h2>
         <div class="insight-grid">
             <div class="insight-card">
                 <h4>💡 Content Gap Analysis</h4>
-                ${sourceCount === 0 ? `
+                ${
+                  sourceCount === 0
+                    ? `
                     <div style="background: #fef3c7; padding: 15px; border-radius: 6px;">
                         <strong>🚀 First-Mover Opportunity</strong><br>
                         No strong sources found - potential to be the authoritative voice on this topic
                     </div>
-                ` : `
+                `
+                    : `
                     <div style="background: #d1fae5; padding: 15px; border-radius: 6px;">
                         <strong>Competition Level: ${sourceCount < 3 ? "LOW 🟢" : sourceCount < 8 ? "MEDIUM 🟡" : "HIGH 🔴"}</strong><br>
-                        ${sourceCount < 3 ? "Excellent opportunity to dominate with quality content" : 
-                          sourceCount < 8 ? "Moderate competition - focus on unique angles" : 
-                          "Saturated space - need exceptional content to compete"}
+                        ${
+                          sourceCount < 3
+                            ? "Excellent opportunity to dominate with quality content"
+                            : sourceCount < 8
+                              ? "Moderate competition - focus on unique angles"
+                              : "Saturated space - need exceptional content to compete"
+                        }
                     </div>
-                `}
+                `
+                }
                 <div style="margin-top: 10px;">
                     <strong>Publisher Diversity:</strong> ${uniquePublishers} unique domains publishing on this topic
                 </div>
@@ -421,7 +497,9 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
         <div class="action-plan">
             <h4 style="color: #1e40af; margin-top: 0;">🎯 This Quarter's Priorities</h4>
-            ${sourceCount === 0 ? `
+            ${
+              sourceCount === 0
+                ? `
                 <div class="action-item">
                     <div class="action-title">1. Create Foundational Content</div>
                     <div class="action-desc">Be the first authoritative source on this topic</div>
@@ -432,7 +510,9 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     <div class="action-desc">Structure content for AI comprehension</div>
                     <div class="action-meta">Priority: HIGH • Timeline: 2-3 weeks</div>
                 </div>
-            ` : sourceCount < 5 ? `
+            `
+                : sourceCount < 5
+                  ? `
                 <div class="action-item">
                     <div class="action-title">1. Competitive Analysis</div>
                     <div class="action-desc">Study top-ranking content gaps</div>
@@ -443,7 +523,8 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     <div class="action-desc">Outperform existing sources</div>
                     <div class="action-meta">Priority: HIGH • Timeline: 4-8 weeks</div>
                 </div>
-            ` : `
+            `
+                  : `
                 <div class="action-item">
                     <div class="action-title">1. Find Unique Angles</div>
                     <div class="action-desc">Highly competitive - need differentiation</div>
@@ -454,7 +535,8 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     <div class="action-desc">Collaborate with authority domains</div>
                     <div class="action-meta">Priority: MEDIUM • Timeline: 6-12 weeks</div>
                 </div>
-            `}
+            `
+            }
         </div>
     </div>
 
@@ -467,23 +549,42 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     ${(() => {
                       const risks = [];
                       if (sourceCount === 0) {
-                        risks.push("No AI citations found - you're invisible in AI search");
-                        risks.push("First-mover advantage available but requires immediate action");
+                        risks.push(
+                          "No AI citations found - you're invisible in AI search"
+                        );
+                        risks.push(
+                          "First-mover advantage available but requires immediate action"
+                        );
                       } else if (sourceCount < 3) {
-                        risks.push("Very low competition - window may close quickly");
-                        risks.push("Limited examples to learn from - higher execution risk");
+                        risks.push(
+                          "Very low competition - window may close quickly"
+                        );
+                        risks.push(
+                          "Limited examples to learn from - higher execution risk"
+                        );
                       } else if (sourceCount > 15) {
-                        risks.push("Highly saturated market - difficult to break through");
-                        risks.push("Established players dominate - need exceptional differentiation");
+                        risks.push(
+                          "Highly saturated market - difficult to break through"
+                        );
+                        risks.push(
+                          "Established players dominate - need exceptional differentiation"
+                        );
                       } else {
-                        risks.push("Moderate competition with good opportunities");
+                        risks.push(
+                          "Moderate competition with good opportunities"
+                        );
                       }
-                      
+
                       if (citationRate < 30) {
-                        risks.push("Low citation rate suggests content quality issues");
+                        risks.push(
+                          "Low citation rate suggests content quality issues"
+                        );
                       }
-                      
-                      return risks.slice(0, 4).map(risk => `<li>${risk}</li>`).join('');
+
+                      return risks
+                        .slice(0, 4)
+                        .map((risk) => `<li>${risk}</li>`)
+                        .join("");
                     })()}
                 </ul>
             </div>
@@ -493,24 +594,44 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     ${(() => {
                       const opportunities = [];
                       if (sourceCount === 0) {
-                        opportunities.push("Blue ocean opportunity - be the first authoritative voice");
-                        opportunities.push("Define the conversation and set industry standards");
+                        opportunities.push(
+                          "Blue ocean opportunity - be the first authoritative voice"
+                        );
+                        opportunities.push(
+                          "Define the conversation and set industry standards"
+                        );
                       } else if (sourceCount < 5) {
-                        opportunities.push("Low competition - excellent opportunity to dominate");
-                        opportunities.push("High potential for thought leadership positioning");
+                        opportunities.push(
+                          "Low competition - excellent opportunity to dominate"
+                        );
+                        opportunities.push(
+                          "High potential for thought leadership positioning"
+                        );
                       } else {
-                        opportunities.push("Balanced competitive landscape with room for growth");
+                        opportunities.push(
+                          "Balanced competitive landscape with room for growth"
+                        );
                       }
-                      
-                      if (!sourceCategories.Government && !sourceCategories.Academic) {
-                        opportunities.push("No government/academic sources - partner opportunity");
+
+                      if (
+                        !sourceCategories.Government &&
+                        !sourceCategories.Academic
+                      ) {
+                        opportunities.push(
+                          "No government/academic sources - partner opportunity"
+                        );
                       }
-                      
+
                       if (uniquePublishers > 5) {
-                        opportunities.push("Diverse landscape - multiple partnership options");
+                        opportunities.push(
+                          "Diverse landscape - multiple partnership options"
+                        );
                       }
-                      
-                      return opportunities.slice(0, 4).map(opp => `<li>${opp}</li>`).join('');
+
+                      return opportunities
+                        .slice(0, 4)
+                        .map((opp) => `<li>${opp}</li>`)
+                        .join("");
                     })()}
                 </ul>
             </div>
@@ -518,13 +639,15 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
         <div class="priority-box">
             <strong>🚀 Immediate Priority:</strong> 
-            ${sourceCount === 0 
-              ? "Create foundational content immediately - first-mover advantage available"
-              : sourceCount < 5
-                ? "Scale content production while competition is low"
-                : sourceCount > 15
-                  ? "Focus on unique angles and exceptional quality to break through"
-                  : "Build consistent content presence and establish thought leadership"}
+            ${
+              sourceCount === 0
+                ? "Create foundational content immediately - first-mover advantage available"
+                : sourceCount < 5
+                  ? "Scale content production while competition is low"
+                  : sourceCount > 15
+                    ? "Focus on unique angles and exceptional quality to break through"
+                    : "Build consistent content presence and establish thought leadership"
+            }
         </div>
     </div>
 
@@ -542,27 +665,34 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${(bundle.sources || []).slice(0, 20).map((s: any, i: number) => {
-                      const isCited = citedSourceIds.has(s.source_id);
-                      return `
-                        <tr style="border-bottom: 1px solid #e2e8f0; ${isCited ? 'background: #f0fdf4;' : ''}">
+                    ${(bundle.sources || [])
+                      .slice(0, 20)
+                      .map((s: any, i: number) => {
+                        const isCited = citedSourceIds.has(s.source_id);
+                        return `
+                        <tr style="border-bottom: 1px solid #e2e8f0; ${isCited ? "background: #f0fdf4;" : ""}">
                             <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${i + 1}</td>
-                            <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${(s.title || s.url).substring(0, 60)}${(s.title || s.url).length > 60 ? '...' : ''}</td>
+                            <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${(s.title || s.url).substring(0, 60)}${(s.title || s.url).length > 60 ? "..." : ""}</td>
                             <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${s.domain}</td>
                             <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${categorizeSource(s.domain)}</td>
-                            <td style="padding: 8px; color: ${isCited ? '#059669' : '#dc2626'}; font-weight: bold;">
-                                ${isCited ? '✅ CITED' : '❌ NOT CITED'}
+                            <td style="padding: 8px; color: ${isCited ? "#059669" : "#dc2626"}; font-weight: bold;">
+                                ${isCited ? "✅ CITED" : "❌ NOT CITED"}
                             </td>
                         </tr>
                       `;
-                    }).join('')}
-                    ${bundle.sources?.length > 20 ? `
+                      })
+                      .join("")}
+                    ${
+                      bundle.sources?.length > 20
+                        ? `
                     <tr>
                         <td colspan="5" style="padding: 8px; text-align: center; font-style: italic; color: #6b7280;">
                             + ${bundle.sources.length - 20} more sources not shown
                         </td>
                     </tr>
-                    ` : ''}
+                    `
+                        : ""
+                    }
                 </tbody>
             </table>
         </div>
@@ -580,7 +710,7 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
       printWindow.document.write(htmlContent);
       printWindow.document.close();
-      
+
       // Wait for content to load, then trigger print dialog
       printWindow.onload = () => {
         setTimeout(() => {
@@ -588,10 +718,9 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
           printWindow.close();
         }, 500);
       };
-
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      alert('Failed to generate PDF. Please try again.');
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
     }
   };
 
@@ -626,7 +755,8 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
           <CardBody>
             <div className="space-y-2">
               <div className="text-lg font-medium text-slate-900">
-                <strong>Subject:</strong> {bundle.run?.subject || "Not specified"}
+                <strong>Subject:</strong>{" "}
+                {bundle.run?.subject || "Not specified"}
               </div>
               <div className="text-base text-slate-700">
                 <strong>Query:</strong> {bundle.run?.query}
@@ -698,11 +828,11 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
 
                         // Show individual sources, not grouped by domain
                         return citedSources
-                          .slice(0, 10) 
+                          .slice(0, 10)
                           .map((source: any, i: number) => {
                             const citationCount =
-                              bundle.evidence?.filter((e: any) =>
-                                e.source_id === source.source_id
+                              bundle.evidence?.filter(
+                                (e: any) => e.source_id === source.source_id
                               ).length || 0;
 
                             return (
@@ -712,11 +842,15 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
                               >
                                 <div className="flex justify-between items-start gap-2">
                                   <div className="flex-1">
-                                    <div className="font-medium text-orange-900 text-sm line-clamp-2" title={source.title}>
+                                    <div
+                                      className="font-medium text-orange-900 text-sm line-clamp-2"
+                                      title={source.title}
+                                    >
                                       {source.title}
                                     </div>
                                     <div className="text-xs text-orange-600 mt-1">
-                                      {source.domain} • {citationCount} citation{citationCount !== 1 ? "s" : ""}
+                                      {source.domain} • {citationCount} citation
+                                      {citationCount !== 1 ? "s" : ""}
                                     </div>
                                   </div>
                                   <div className="text-lg font-bold text-orange-500 flex-shrink-0">
@@ -1370,11 +1504,27 @@ export default function ViewReport({ bundle }: { bundle: RunBundle }) {
               url.includes("/newsroom/")
             )
               return "Promotional/blog content";
-            if (credibility < 0.6) return "Lower perceived authority";
+            // NEW: Passage-based selection (not domain authority)
+            if (!text || text.length < 200) return "No extractable passages";
+
+            const queryWords: string[] = (bundle.run?.query || "")
+              .toLowerCase()
+              .split(" ");
+            const hasQueryTerms = queryWords.some(
+              (term: string) =>
+                term.length > 3 && text.toLowerCase().includes(term)
+            );
+            if (!hasQueryTerms) return "Weak passage relevance (low BM25)";
+
+            // Check for clear structure
+            const sentences = text.split(". ");
+            if (sentences.length < 3) return "Poor text structure";
+
+            // No longer using credibility scores
             if (yearsOld !== null && yearsOld > 5) return "Likely outdated";
             if (citedDomains.has(s.domain))
               return "Duplicate coverage vs. already cited domain";
-            return "Lower relevance vs. alternatives";
+            return "Weaker passages vs. cited sources";
           };
 
           return (
