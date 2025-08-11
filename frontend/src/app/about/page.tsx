@@ -42,7 +42,7 @@ export default function AboutPage() {
                 <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   1
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Query Processing</h4>
                   <p className="text-slate-600">
                     The system interprets your question and determines what information to search for
@@ -53,7 +53,7 @@ export default function AboutPage() {
                 <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   2
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Web Search</h4>
                   <p className="text-slate-600">
                     Advanced algorithms search the web for relevant sources using proprietary methods
@@ -64,7 +64,7 @@ export default function AboutPage() {
                 <div className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   3
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Content Analysis</h4>
                   <p className="text-slate-600">
                     Sophisticated algorithms read and evaluate each found source for relevance and quality
@@ -75,7 +75,7 @@ export default function AboutPage() {
                 <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   4
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Authority Assessment</h4>
                   <p className="text-slate-600">
                     The system applies proprietary credibility filters to prioritize trustworthy sources
@@ -86,7 +86,7 @@ export default function AboutPage() {
                 <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   5
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Realistic Citation Selection</h4>
                   <p className="text-slate-600">
                     AI search engines use sophisticated algorithms balancing query relevance, contextual authority, content quality, and source diversity - not just domain TLD rankings
@@ -97,7 +97,7 @@ export default function AboutPage() {
                 <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   6
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Answer Generation</h4>
                   <p className="text-slate-600">
                     The system composes the final response with citations to selected sources
@@ -136,7 +136,7 @@ export default function AboutPage() {
                 <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   1
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Query Expansion</h4>
                   <p className="text-slate-600">
                     We generate diverse search variants with authority-biased language, avoiding corporate marketing terms
@@ -147,7 +147,7 @@ export default function AboutPage() {
                 <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   2
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Multi-Provider Discovery</h4>
                   <p className="text-slate-600">
                     We search across 5 providers: Tavily (advanced depth), Brave, Bing, Perplexity (LLM-native), and OpenAI for maximum recall diversity and algorithmic bias reduction
@@ -158,7 +158,7 @@ export default function AboutPage() {
                 <div className="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   3
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Authority Re-ranking</h4>
                   <p className="text-slate-600">
                     We prioritize gov/edu/research sources over corporate blogs using credibility scoring and category boosts
@@ -169,7 +169,7 @@ export default function AboutPage() {
                 <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   4
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Content Processing</h4>
                   <p className="text-slate-600">
                     We extract clean text with Trafilatura/Readability + content deduplication across providers
@@ -180,7 +180,7 @@ export default function AboutPage() {
                 <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   5
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Consensus Tracking & Weighted Deduplication</h4>
                   <p className="text-slate-600">
                     We preserve cross-provider consensus signals (15% boost for 2 providers, 25% for 3+) as authority indicators while smart deduplication removes URL duplicates
@@ -191,10 +191,10 @@ export default function AboutPage() {
                 <div className="bg-indigo-700 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   6
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-800">Passage-Based Citation Selection (2025 Research)</h4>
+                <div className="step-content">
+                  <h4 className="font-semibold text-slate-800">Passage-Based Citation Selection</h4>
                   <p className="text-slate-600">
-                    NEW: We now mirror actual AI search engine behavior using passage-level BM25 scoring (45% relevance, 25% passage quality, 20% content depth, 10% consensus) - exactly how Perplexity/ChatGPT select citations from best snippets, not domain TLD rankings
+                    We mirror actual AI search engine behavior using passage-level BM25 scoring (45% relevance, 25% passage quality, 20% content depth, 10% consensus) - exactly how Perplexity/ChatGPT select citations from best snippets, not domain TLD rankings
                   </p>
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function AboutPage() {
                 <div className="bg-violet-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   7
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Diverse AI Answer Generation</h4>
                   <p className="text-slate-600">
                     LLM composes answers using pre-selected diverse, relevant sources that mirror real ChatGPT/Perplexity citation patterns - targeting 10 citations across different source types
@@ -213,7 +213,7 @@ export default function AboutPage() {
                 <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                   8
                 </div>
-                <div>
+                <div className="step-content">
                   <h4 className="font-semibold text-slate-800">Consensus Analytics & Citation Intelligence</h4>
                   <p className="text-slate-600">
                     We analyze cross-provider consensus vs citation correlations, provider effectiveness, and authority pattern research with comprehensive performance tracking
@@ -235,32 +235,22 @@ export default function AboutPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>🚀 2025 Research Breakthrough: Realistic Citation Selection</CardTitle>
+          <CardTitle>🚀 Passage-Based Citation Selection</CardTitle>
         </CardHeader>
         <CardBody>
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
             <p className="text-blue-800">
-              <strong>Major Update (January 2025):</strong> Based on analysis of 41 million AI search results across ChatGPT, Perplexity, and Google AI Overviews, we've completely rebuilt our citation selector to mirror real AI behavior. The old "domain TLD = authority" approach has been replaced with sophisticated query-context scoring.
+              <strong>System Design:</strong> Our citation selector mirrors real AI search behavior like Perplexity and ChatGPT using passage-level BM25 scoring that evaluates actual content quality and query relevance, not domain authority.
             </p>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-3 rounded border border-blue-200">
-                <h4 className="font-semibold text-blue-800 mb-2">❌ Old Approach (Unrealistic)</h4>
-                <ul className="space-y-1 text-blue-700 text-sm">
-                  <li>• All .edu domains = high authority (0.90)</li>
-                  <li>• Simple domain TLD rankings</li>
-                  <li>• Ignored query context and relevance</li>
-                  <li>• Only showed highest "credibility" sources</li>
-                  <li>• Led to .edu/.gov dominance regardless of topic</li>
-                </ul>
-              </div>
+            <div className="mt-4">
               <div className="bg-white p-3 rounded border border-green-200">
-                <h4 className="font-semibold text-green-800 mb-2">✅ New Approach (Research-Based)</h4>
+                <h4 className="font-semibold text-green-800 mb-2">✅ Citation Selection Approach</h4>
                 <ul className="space-y-1 text-green-700 text-sm">
                   <li>• Passage-level BM25 relevance (45% weight)</li>
                   <li>• Best snippet quality scoring (25% weight)</li>
                   <li>• Content depth and structure (20% weight)</li>
                   <li>• Multi-provider consensus (10% weight)</li>
-                  <li>• Tech startup blog {'>'} random .edu for tech queries</li>
+                  <li>• Query relevance beats domain prestige</li>
                   <li>• Mirrors actual ChatGPT/Perplexity citation patterns</li>
                 </ul>
               </div>
@@ -291,13 +281,13 @@ export default function AboutPage() {
           </div>
           
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <h4 className="font-semibold text-green-800 mb-2">Key Research Findings That Changed Our Approach:</h4>
+            <h4 className="font-semibold text-green-800 mb-2">Key Implementation Details:</h4>
             <ul className="space-y-1 text-green-700 text-sm">
-              <li>• <strong>ChatGPT:</strong> 47% Wikipedia, but mixes commercial (.com 80%+), community (Reddit), tech publishers</li>
-              <li>• <strong>Google AI:</strong> YouTube, LinkedIn, Gartner, Reddit, Quora - intentionally diverse source types</li>
-              <li>• <strong>Perplexity:</strong> Heavy community (Reddit), review platforms (Yelp, G2), curated authority lists</li>
-              <li>• <strong>97.2% of AI citations can't be explained by backlinks</strong> - content structure and semantic clarity matter more</li>
-              <li>• <strong>Reciprocal Rank Fusion:</strong> AI runs multiple query variants, topical authority sites score 60x higher</li>
+              <li>• <strong>Passage Scoring:</strong> BM25 algorithm finds best snippet in each document for query relevance</li>
+              <li>• <strong>Content Quality:</strong> Evaluates structure, depth, and information density of passages</li>
+              <li>• <strong>Multi-Provider Consensus:</strong> Sources found by multiple search engines get boosted</li>
+              <li>• <strong>Content-First:</strong> A tech blog with relevant content beats irrelevant pages regardless of domain</li>
+              <li>• <strong>Context-Aware:</strong> Citation count varies by query type (3-5 sources based on intent)</li>
             </ul>
           </div>
         </CardBody>
@@ -305,33 +295,32 @@ export default function AboutPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>📊 Research Findings: The Citation Authority Hierarchy</CardTitle>
+          <CardTitle>📊 How Citations Are Actually Selected</CardTitle>
         </CardHeader>
         <CardBody>
           <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-4">
             <p className="text-yellow-800">
-              <strong>Key Discovery:</strong> AI systems show clear bias toward authoritative sources, 
-              with corporate blogs frequently filtered out during citation selection. Additionally, our research reveals that 
-              <strong>cross-provider consensus significantly predicts citation likelihood</strong> - sources found by 3+ search providers 
-              get cited 25% more frequently than single-provider discoveries.
+              <strong>Current System:</strong> Citations are selected based on passage quality and query relevance, 
+              NOT domain authority. The system evaluates each source's content to find the best snippets that answer the specific query.
+              <strong>Multi-provider consensus</strong> (sources found by multiple search engines) provides a small boost but content quality is primary.
             </p>
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="font-semibold text-yellow-800 mb-2">High Citation Rate (80-95%)</h4>
+                <h4 className="font-semibold text-yellow-800 mb-2">High Citation Factors</h4>
                 <ul className="space-y-1 text-yellow-700 text-sm">
-                  <li>• Government (.gov) sources</li>
-                  <li>• Academic institutions (.edu)</li>
-                  <li>• Peer-reviewed publications</li>
-                  <li>• Research institutes (Brookings, RAND)</li>
+                  <li>• Strong passage relevance (high BM25 score)</li>
+                  <li>• Clear, structured content with good snippets</li>
+                  <li>• Direct answers to query in extractable passages</li>
+                  <li>• Multi-provider discovery consensus</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-yellow-800 mb-2">Low Citation Rate (15-35%)</h4>
+                <h4 className="font-semibold text-yellow-800 mb-2">Low Citation Factors</h4>
                 <ul className="space-y-1 text-yellow-700 text-sm">
-                  <li>• Corporate blogs and marketing content</li>
-                  <li>• "Best practices" and "trends" articles</li>
-                  <li>• Social media posts</li>
-                  <li>• Promotional vendor content</li>
+                  <li>• Weak passage relevance to query</li>
+                  <li>• Poor text structure (no clear snippets)</li>
+                  <li>• Marketing fluff without specific information</li>
+                  <li>• Content doesn't contain query-relevant passages</li>
                 </ul>
               </div>
             </div>
@@ -341,66 +330,66 @@ export default function AboutPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>🔬 Breakthrough: Multi-Provider Consensus Research</CardTitle>
+          <CardTitle>🔬 Multi-Provider Search Implementation</CardTitle>
         </CardHeader>
         <CardBody>
           <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
-            <h4 className="font-semibold text-green-800 mb-3">Research Innovation: Cross-Provider Citation Prediction</h4>
+            <h4 className="font-semibold text-green-800 mb-3">How Multi-Provider Consensus Works</h4>
             <p className="text-green-700 mb-3">
-              Our platform is the first to systematically study how <strong>search provider consensus</strong> affects AI citation behavior. 
-              By analyzing sources discovered by multiple search engines simultaneously, we've uncovered powerful predictive patterns.
+              Our system searches across multiple providers (Tavily, OpenAI, Perplexity, Gemini) and tracks when the same source is discovered by multiple engines. 
+              This consensus signal provides a small boost (10% weight) in our citation selection algorithm.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">Single Provider</div>
-                <div className="text-sm text-green-600">Baseline citation rate</div>
-                <div className="mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs">Found by: Tavily only</div>
+                <div className="text-2xl font-bold text-green-800">1 Provider</div>
+                <div className="text-sm text-green-600">Single discovery</div>
+                <div className="mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded text-xs">Base consensus score</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">+15%</div>
-                <div className="text-sm text-green-600">Dual-provider boost</div>
-                <div className="mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs">Found by: Tavily + Brave</div>
+                <div className="text-2xl font-bold text-green-800">2 Providers</div>
+                <div className="text-sm text-green-600">Dual discovery</div>
+                <div className="mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs">Higher consensus signal</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">+25%</div>
-                <div className="text-sm text-green-600">Strong consensus boost</div>
-                <div className="mt-2 px-3 py-1 bg-green-100 text-green-700 rounded text-xs">Found by: Tavily + Brave + Bing</div>
+                <div className="text-2xl font-bold text-green-800">3+ Providers</div>
+                <div className="text-sm text-green-600">Strong consensus</div>
+                <div className="mt-2 px-3 py-1 bg-green-100 text-green-700 rounded text-xs">Maximum consensus boost</div>
               </div>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold text-slate-800 mb-3">Why Consensus Matters</h4>
+              <h4 className="font-semibold text-slate-800 mb-3">Why Consensus Helps</h4>
               <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Algorithm Validation:</strong> Multiple providers finding the same source suggests genuine authority</div>
+                  <div><strong>Validation:</strong> Multiple engines finding the same source suggests relevance</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Bias Reduction:</strong> Cross-provider discovery reduces single-algorithm blind spots</div>
+                  <div><strong>Bias Reduction:</strong> Reduces single-algorithm blind spots</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Quality Signal:</strong> Consensus acts as a distributed quality filter</div>
+                  <div><strong>Quality Signal:</strong> Acts as a distributed relevance filter</div>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-slate-800 mb-3">Research Applications</h4>
+              <h4 className="font-semibold text-slate-800 mb-3">System Applications</h4>
               <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Citation Prediction:</strong> Forecast which sources will be cited before composition</div>
+                  <div><strong>Citation Scoring:</strong> Small consensus boost in selection algorithm</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Provider Analysis:</strong> Compare effectiveness of different search engines</div>
+                  <div><strong>Provider Analysis:</strong> Track which engines find which sources</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Authority Patterns:</strong> Identify which .gov/.edu sources get consensus discovery</div>
+                  <div><strong>Deduplication:</strong> Merge same sources found by different providers</div>
                 </li>
               </ul>
             </div>
@@ -414,45 +403,44 @@ export default function AboutPage() {
         </CardHeader>
         <CardBody>
           <p className="text-slate-700 mb-4">
-            Based on our analysis of AI search behavior, content gets cited when
-            it has:
+            With our passage-based system, content gets cited based on actual relevance and quality:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-semibold text-slate-800 mb-3">Domain Authority Factors</h4>
+              <h4 className="font-semibold text-slate-800 mb-3">Passage Quality Factors</h4>
               <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Domain credibility:</strong> .gov {'>'} .edu {'>'} research institutes {'>'} news {'>'} corporate</div>
+                  <div><strong>Query relevance:</strong> Content directly answers the specific question</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Publisher recognition:</strong> Nature, Springer, IEEE get 0.85-0.95 scores</div>
+                  <div><strong>Clear passages:</strong> Well-structured text that extracts into good snippets</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Content categorization:</strong> Research papers vs. marketing blogs</div>
+                  <div><strong>Information density:</strong> Specific details vs. vague statements</div>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-slate-800 mb-3">Content Quality Signals</h4>
+              <h4 className="font-semibold text-slate-800 mb-3">Content Structure Signals</h4>
               <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Substantial length:</strong> 2000+ characters preferred</div>
+                  <div><strong>Extractable snippets:</strong> Self-contained paragraphs with clear information</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Academic language:</strong> "study", "research", "findings" vs. "trends"</div>
+                  <div><strong>Structured content:</strong> Lists, definitions, examples that AI can parse</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Named authorship:</strong> Increases credibility score</div>
+                  <div><strong>Content depth:</strong> Sufficient detail to be useful (500+ chars minimum)</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Recency consideration:</strong> Recent content gets small boost</div>
+                  <div><strong>Multi-provider discovery:</strong> Found by multiple search engines</div>
                 </li>
               </ul>
             </div>
@@ -462,11 +450,11 @@ export default function AboutPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>⚙️ Advanced Research Implementation</CardTitle>
+          <CardTitle>⚙️ System Implementation</CardTitle>
         </CardHeader>
         <CardBody>
           <p className="text-slate-700 mb-4">
-            Our comprehensive system implements cutting-edge techniques to understand AI search citation behavior:
+            Our system implements passage-based citation selection that mirrors real AI search engines:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -474,45 +462,45 @@ export default function AboutPage() {
               <div>
                 <h4 className="font-semibold text-slate-800 mb-2">🔍 Multi-Provider Search</h4>
                 <p className="text-slate-600 text-sm">
-                  Tavily (advanced depth) + OpenAI for diversified recall and reduced algorithmic bias. 
-                  Comprehensive provider performance tracking.
+                  Searches across Tavily, OpenAI, Perplexity, and Gemini for diverse source discovery. 
+                  Tracks consensus when same sources found by multiple providers.
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-800 mb-2">🎯 Authority-Based Re-ranking</h4>
+                <h4 className="font-semibold text-slate-800 mb-2">🎯 Passage-Based Ranking</h4>
                 <p className="text-slate-600 text-sm">
-                  Pre-filters results using credibility scores and category boosts before AI composition. 
-                  Gov/edu/research prioritized over corporate blogs.
+                  Uses BM25 scoring to find the best snippet in each document that answers the query. 
+                  Content quality and relevance determine ranking.
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-800 mb-2">🧠 LLM Query Expansion</h4>
+                <h4 className="font-semibold text-slate-800 mb-2">🧠 Query Expansion</h4>
                 <p className="text-slate-600 text-sm">
-                  AI-generated diverse search terms with academic language preference. 
-                  Avoids corporate marketing bias ("trends 2025").
+                  Generates diverse search variants to improve source discovery. 
+                  Combines original query with contextual alternatives.
                 </p>
               </div>
             </div>
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold text-slate-800 mb-2">📄 Clean Content Extraction</h4>
+                <h4 className="font-semibold text-slate-800 mb-2">📄 Content Extraction</h4>
                 <p className="text-slate-600 text-sm">
-                  Trafilatura + Readability for clean article text. Content deduplication 
-                  across providers with similarity detection.
+                  Trafilatura + Readability for clean text extraction. 
+                  Deduplicates similar content across providers.
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-800 mb-2">🎪 Snippet Alignment</h4>
+                <h4 className="font-semibold text-slate-800 mb-2">🎪 Citation Selection</h4>
                 <p className="text-slate-600 text-sm">
-                  Extracts and verifies actual quoted passages with confidence scoring. 
-                  Multi-strategy matching: direct phrases, concepts, fuzzy similarity.
+                  TRUE citation selector evaluates passage relevance (45%), snippet quality (25%), 
+                  content structure (20%), and consensus (10%).
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-800 mb-2">📊 Citation Intelligence</h4>
+                <h4 className="font-semibold text-slate-800 mb-2">📊 Analytics</h4>
                 <p className="text-slate-600 text-sm">
-                  Comprehensive analytics on discovery vs citation gaps, provider effectiveness, 
-                  and authority performance metrics.
+                  Tracks source discovery vs citation patterns. 
+                  Shows why sources get ignored based on passage quality, not domain bias.
                 </p>
               </div>
             </div>
@@ -538,30 +526,30 @@ export default function AboutPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>📊 Multi-Factor Credibility Scoring</CardTitle>
+            <CardTitle>📊 Passage Quality Evaluation</CardTitle>
           </CardHeader>
           <CardBody>
             <div className="space-y-3 text-slate-700 mb-4">
               <div className="flex justify-between items-center">
-                <strong className="text-green-700">A Grade (0.80-1.00)</strong>
-                <span className="text-sm">Nature, .gov, .edu</span>
+                <strong className="text-green-700">High Relevance</strong>
+                <span className="text-sm">Strong BM25 passage match</span>
               </div>
               <div className="flex justify-between items-center">
-                <strong className="text-blue-700">B Grade (0.60-0.79)</strong>
-                <span className="text-sm">News, consultancy</span>
+                <strong className="text-blue-700">Good Structure</strong>
+                <span className="text-sm">Clear, extractable snippets</span>
               </div>
               <div className="flex justify-between items-center">
-                <strong className="text-orange-700">C Grade (0.40-0.59)</strong>
-                <span className="text-sm">Corporate, nonprofits</span>
+                <strong className="text-orange-700">Adequate Content</strong>
+                <span className="text-sm">Sufficient depth and information</span>
               </div>
               <div className="flex justify-between items-center">
-                <strong className="text-red-700">D Grade (&lt; 0.40)</strong>
-                <span className="text-sm">Blogs, social media</span>
+                <strong className="text-red-700">Poor Match</strong>
+                <span className="text-sm">Weak query relevance</span>
               </div>
             </div>
             <p className="text-slate-600 text-sm">
-              Enhanced scoring considers domain authority, recency, content length, 
-              authorship, and title quality. Academic publishers get 0.85-0.95 scores.
+              Evaluation focuses on how well passages answer the specific query. 
+              Content quality and relevance determine citation likelihood.
             </p>
           </CardBody>
         </Card>
@@ -578,23 +566,23 @@ export default function AboutPage() {
               <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Citation funnel:</strong> Discovery → Authority Re-ranking → Citation</div>
+                  <div><strong>Citation funnel:</strong> Discovery → Passage Scoring → Citation</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Multi-provider performance:</strong> Tavily, Brave, Bing, Perplexity effectiveness comparison</div>
+                  <div><strong>Multi-provider performance:</strong> Tavily, OpenAI, Perplexity, Gemini effectiveness comparison</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Consensus correlation:</strong> Cross-provider discovery vs citation rate analysis</div>
+                  <div><strong>Consensus patterns:</strong> Multi-provider discovery correlation with citations</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Authority distribution:</strong> Gov/edu/research vs. corporate breakdown</div>
+                  <div><strong>Content analysis:</strong> Passage quality vs citation success rates</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <div><strong>Snippet alignment:</strong> Citation accuracy with confidence scores</div>
+                  <div><strong>Source breakdown:</strong> Why sources get ignored (passage-based heuristics)</div>
                 </li>
               </ul>
             </div>
@@ -607,11 +595,11 @@ export default function AboutPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Query expansion analysis:</strong> LLM-generated vs. authority variants</div>
+                  <div><strong>Query expansion analysis:</strong> Original vs contextual search variants</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
-                  <div><strong>Cross-run insights:</strong> Competitive landscape and market trends</div>
+                  <div><strong>Passage scoring:</strong> BM25 relevance and snippet quality metrics</div>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">•</span>
@@ -625,31 +613,31 @@ export default function AboutPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>💡 What Organizations Should Do to Get Cited</CardTitle>
+          <CardTitle>💡 How to Get Your Content Cited</CardTitle>
         </CardHeader>
         <CardBody>
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <h4 className="font-semibold text-green-800 mb-3">Research-Based Recommendations</h4>
+            <h4 className="font-semibold text-green-800 mb-3">Passage-Based Optimization</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h5 className="font-semibold text-green-700 mb-2">Content Strategy</h5>
+                <h5 className="font-semibold text-green-700 mb-2">Content Structure</h5>
                 <ul className="space-y-1 text-green-700 text-sm">
-                  <li>• Publish research papers, whitepapers, policy documents</li>
-                  <li>• Use academic language: "study", "research", "findings"</li>
-                  <li>• Include named authors and publication dates</li>
-                  <li>• Create substantial content (2000+ characters)</li>
-                  <li>• Avoid clickbait titles and marketing jargon</li>
+                  <li>• Write self-contained paragraphs that answer specific questions</li>
+                  <li>• Use clear topic sentences and structured information</li>
+                  <li>• Include specific examples and actionable details</li>
+                  <li>• Create content with sufficient depth (500+ characters minimum)</li>
+                  <li>• Avoid vague marketing language - be specific and informative</li>
                 </ul>
               </div>
               <div>
-                <h5 className="font-semibold text-green-700 mb-2">Multi-Provider Discovery Strategy</h5>
+                <h5 className="font-semibold text-green-700 mb-2">Query Optimization</h5>
                 <ul className="space-y-1 text-green-700 text-sm">
-                  <li>• Optimize for discovery across multiple search engines (not just Google SEO)</li>
-                  <li>• Partner with .edu institutions for co-authored research</li>
-                  <li>• Publish in recognized journals (IEEE, Nature, Springer)</li>
-                  <li>• Get cited by government (.gov) sources to build cross-engine authority</li>
-                  <li>• Build relationships with think tanks (Brookings, RAND)</li>
-                  <li>• Target consensus discovery - create content that multiple algorithms find valuable</li>
+                  <li>• Research what questions your audience actually asks</li>
+                  <li>• Include query-relevant keywords naturally in your content</li>
+                  <li>• Write content that directly addresses common search queries</li>
+                  <li>• Focus on information density over domain prestige</li>
+                  <li>• Test content across multiple search engines for discoverability</li>
+                  <li>• Create content that multiple search algorithms find valuable</li>
                 </ul>
               </div>
             </div>

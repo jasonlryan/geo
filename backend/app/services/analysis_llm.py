@@ -40,10 +40,11 @@ def build_analysis_input(bundle: Dict[str, Any]) -> Dict[str, Any]:
         text = (s.get("raw_text") or "")[:1200]
         
         # Import classification functions
-        from ..utils.source_categorization import classify_authority, classify_recency
+        from ..utils.source_categorization import classify_recency
         
-        # Enhanced source data for better intelligence analysis
-        credibility_score = s.get("credibility", {}).get("score", 0.0)
+        # NEW: Passage-based analysis data (no hardcoded credibility)
+        passage_data = s.get("_best_passage", {})
+        discovered_by = s.get("discovered_by", [s.get("search_provider", "unknown")])
         
         return {
             "source_id": s.get("source_id"),
@@ -53,8 +54,9 @@ def build_analysis_input(bundle: Dict[str, Any]) -> Dict[str, Any]:
             "published_at": s.get("published_at"),
             "media_type": s.get("media_type"),
             "source_category": s.get("category"),           # Business categorization
-            "credibility_score": credibility_score,         # Authority signal
-            "authority_level": classify_authority(credibility_score), # High/medium/low
+            "passage_relevance_score": passage_data.get("score", 0.0), # BM25 passage score
+            "snippet_quality": min(1.0, len(text) / 1000),  # Content depth indicator  
+            "consensus_count": len(discovered_by),          # Multi-provider discovery
             "recency_category": classify_recency(s.get("published_at")), # Recent/medium/stale
             "author": s.get("author"),                      # Authority signal
             "publisher": s.get("publisher"),                # Authority signal

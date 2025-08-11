@@ -164,9 +164,6 @@ export default function MainInsightsPanel() {
       // Open modal with bundle - ViewReport will handle generation
       setSelectedRunBundle(bundle);
       setShowReportModal(true);
-      
-      // Refresh the data to update reports list
-      await loadData();
     } catch (e: any) {
       alert(`Error loading run data: ${e.message}`);
     } finally {
@@ -701,6 +698,8 @@ export default function MainInsightsPanel() {
           onClose={() => {
             setShowReportModal(false);
             setSelectedRunBundle(null);
+            // Refresh data when modal closes to update reports list
+            loadData();
           }}
           title="AI Search Intelligence Report"
         >

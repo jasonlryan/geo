@@ -143,3 +143,9 @@ button:disabled {
 .text-warning { color: theme(colors.amber.600); }
 .text-danger { color: theme(colors.red.600); }
 
+/* About page step panels - multicolored backgrounds with black text */
+.step-content h4,
+.step-content p {
+  color: theme(colors.slate.900) !important;
+}
+
